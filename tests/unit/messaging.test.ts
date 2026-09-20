@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { applyMergeFields, render } from '@/lib/messaging/templates';
 import { signSvix, verifySvixSignature } from '@/lib/messaging/svix';
+import { signMeta, verifyMetaSignature } from '@/lib/messaging/meta-webhook';
 
 const DATA = {
   firstName: 'Naledi',
@@ -70,6 +71,14 @@ describe('render', () => {
     expect(message.whatsappImageUrl).toBe('https://cdn.test/passes/x.png');
     expect(message.html).toContain('alt="Your entry pass QR code"');
     expect(message.whatsappText).toContain(DATA.passUrl);
+  });
+
+  it('puts the pass link under a broadcast so a guest can tap straight through', () => {
+    const message = render('broadcast', { ...DATA, body: 'Dinner is served.' });
+    expect(message.whatsappText).toContain('*CUT Fundraising Gala Dinner*');
+    expect(message.whatsappText).toContain('Dinner is served.');
+    expect(message.whatsappText).toContain(DATA.passUrl);
+    expect(message.html).toContain(DATA.passUrl);
   });
 
   it('carries the Section 18A line on the winner and receipt messages', () => {
@@ -156,5 +165,43 @@ describe('verifySvixSignature', () => {
     expect(verifySvixSignature({ secret, id, timestamp, signatureHeader: '', body, now })).toBe(
       false,
     );
+  });
+});
+
+describe('verifyMetaSignature', () => {
+  const appSecret = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
+  const body =
+    '{"object":"whatsapp_business_account","entry":[{"changes":[{"value":{"statuses":[{"id":"wamid.x","status":"delivered"}]}}]}]}';
+
+  it('accepts the header Meta would send for the raw body', () => {
+    const signatureHeader = signMeta({ appSecret, body });
+    expect(signatureHeader.startsWith('sha256=')).toBe(true);
+    expect(verifyMetaSignature({ appSecret, signatureHeader, body })).toBe(true);
+  });
+
+  it('rejects a body that changed after signing', () => {
+    const signatureHeader = signMeta({ appSecret, body });
+    expect(
+      verifyMetaSignature({ appSecret, signatureHeader, body: body.replace('delivered', 'read') }),
+    ).toBe(false);
+  });
+
+  it('rejects the wrong secret', () => {
+    const signatureHeader = signMeta({ appSecret, body });
+    expect(verifyMetaSignature({ appSecret: 'other', signatureHeader, body })).toBe(false);
+  });
+
+  it('rejects a missing, malformed or wrong-scheme header rather than throwing', () => {
+    expect(verifyMetaSignature({ appSecret, signatureHeader: null, body })).toBe(false);
+    expect(verifyMetaSignature({ appSecret, signatureHeader: '', body })).toBe(false);
+    expect(verifyMetaSignature({ appSecret, signatureHeader: 'nonsense', body })).toBe(false);
+    expect(verifyMetaSignature({ appSecret, signatureHeader: 'sha1=abc', body })).toBe(false);
+    expect(verifyMetaSignature({ appSecret, signatureHeader: 'sha256=', body })).toBe(false);
+    expect(verifyMetaSignature({ appSecret, signatureHeader: 'sha256=abc', body })).toBe(false);
+  });
+
+  it('refuses everything when no app secret is configured', () => {
+    const signatureHeader = signMeta({ appSecret, body });
+    expect(verifyMetaSignature({ appSecret: '', signatureHeader, body })).toBe(false);
   });
 });

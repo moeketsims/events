@@ -26,6 +26,13 @@ const PILL: Record<string, string> = {
   open: 'bg-gold-500 text-cut-950',
   unsold: 'bg-ink-100 text-ink-500',
   withdrawn: 'bg-ink-100 text-ink-500',
+  // deliveries
+  queued: 'bg-ink-100 text-ink-700',
+  sent: 'bg-sky-500/12 text-sky-500',
+  delivered: 'bg-green-600/12 text-green-600',
+  read: 'bg-green-600/12 text-green-600',
+  failed: 'bg-red-700/10 text-red-700',
+  bounced: 'bg-red-700/10 text-red-700',
 };
 
 export function StatusPill({

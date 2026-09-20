@@ -8,6 +8,8 @@ import { verifyTokenOfKind } from '@/lib/auth/pass';
 import { isBuilt } from '@/lib/features';
 import { passQrSvg, passUrl } from '@/lib/qr';
 import { formatEventDate, formatTime, formatBidderNumber } from '@/lib/dates';
+import { feedFor } from '@/lib/broadcasts/feed';
+import { Feed } from './Feed';
 
 export const metadata = {
   title: 'Your pass',
@@ -52,7 +54,7 @@ export default async function PassPage({ params }: { params: Promise<{ token: st
 
   if (!event) notFound();
 
-  const qrSvg = await passQrSvg(token);
+  const [qrSvg, feed] = await Promise.all([passQrSvg(token), feedFor(admin, attendee.id)]);
   const checkedIn = attendee.checked_in_at !== null;
   const firstName = attendee.display_name.split(' ')[0] ?? attendee.display_name;
 
@@ -179,8 +181,8 @@ export default async function PassPage({ params }: { params: Promise<{ token: st
           </section>
         ) : null}
 
-        {/* The feed. Filled in T3.1; the section exists so the page does not
-            change shape when the first broadcast lands. */}
+        {/* The feed — TASKS T3.1. Rendered with the guest's own in_app delivery
+            rows, then kept live by the client on `event:{id}`. */}
         <section aria-labelledby="feed-heading" className="mt-8">
           <h2
             id="feed-heading"
@@ -188,11 +190,17 @@ export default async function PassPage({ params }: { params: Promise<{ token: st
           >
             From the organisers
           </h2>
-          <p className="glass-panel mt-3 rounded-2xl p-5 text-sm leading-relaxed text-white/60">
-            {checkedIn
-              ? `Nothing yet, ${firstName}. Messages from the Advancement team appear here during the event.`
-              : 'Messages from the Advancement team appear here once you have arrived.'}
-          </p>
+          <Feed
+            token={token}
+            eventId={event.id}
+            attendeeId={attendee.id}
+            initial={feed}
+            emptyCopy={
+              checkedIn
+                ? `Nothing yet, ${firstName}. Messages from the Advancement team appear here during the event.`
+                : 'Messages from the Advancement team appear here once you have arrived.'
+            }
+          />
         </section>
 
         <footer className="mt-10 text-center">

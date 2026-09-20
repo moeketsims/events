@@ -14,7 +14,7 @@
  *   results     T4.3  /events/[id]/results
  */
 export const FEATURES = {
-  broadcasts: false,
+  broadcasts: true,
   auction: false,
   bidding: false,
   console: false,

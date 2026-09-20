@@ -183,8 +183,15 @@ function broadcast(data: TemplateData): RenderedMessage {
         data.passUrl ? emailButton(data.passUrl, 'Open your pass') : '',
       ].join(''),
     }),
-    text: [title, '', message].join('\n'),
-    whatsappText: [`*${title}*`, '', message].join('\n'),
+    text: [title, '', message, ...(data.passUrl ? ['', `Your pass: ${data.passUrl}`] : [])].join(
+      '\n',
+    ),
+    whatsappText: [
+      `*${title}*`,
+      '',
+      message,
+      ...(data.passUrl ? ['', `Your pass: ${data.passUrl}`] : []),
+    ].join('\n'),
   };
 }
 
