@@ -538,6 +538,117 @@
     animation-delay: var(--reveal-delay, 0s);
   }
 
+  /* ---- Console vocabulary v3 (DESIGN-SYSTEM §5.1): ledger, ticket, desk ---- */
+
+  /* Ledger: a printed-programme band of figures. No boxes; rules and hairlines. */
+  .ledger {
+    display: grid;
+    border-top: 1px solid var(--color-hairline-strong);
+    border-bottom: 1px solid var(--color-hairline-strong);
+    background:
+      linear-gradient(90deg, rgba(0, 50, 97, 0.025), rgba(0, 50, 97, 0)) left / 40% 100% no-repeat;
+  }
+  .ledger > * {
+    position: relative;
+    padding: 1.5rem 1.75rem 1.5rem 1.5rem;
+  }
+  .ledger > * + *::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 1.25rem;
+    bottom: 1.25rem;
+    width: 1px;
+    background: linear-gradient(180deg, transparent, rgba(251, 185, 39, 0.8), transparent);
+  }
+  @media (max-width: 1023px) {
+    .ledger > * + *::before {
+      display: none;
+    }
+    .ledger > * + * {
+      border-top: 1px solid var(--color-hairline);
+    }
+  }
+
+  /* Ticket: stub, perforation with notches, body, barcode edge. */
+  .ticket {
+    position: relative;
+    display: grid;
+    grid-template-columns: 5.75rem minmax(0, 1fr) auto;
+    background: var(--color-paper);
+    border: 1px solid var(--color-hairline);
+    border-radius: 0.875rem;
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+  }
+  .ticket::before,
+  .ticket::after {
+    content: '';
+    position: absolute;
+    left: calc(5.75rem - 8px);
+    width: 16px;
+    height: 16px;
+    border-radius: 9999px;
+    background: var(--color-canvas);
+    border: 1px solid var(--color-hairline);
+    z-index: 2;
+  }
+  .ticket::before {
+    top: -9px;
+  }
+  .ticket::after {
+    bottom: -9px;
+  }
+  .ticket-stub {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.125rem;
+    background: var(--color-cut-50);
+    border-right: 1px dashed var(--color-hairline-strong);
+  }
+  .ticket-barcode {
+    width: 2.25rem;
+    margin: 0.875rem 0.875rem 0.875rem 0;
+    border-radius: 0.25rem;
+    opacity: 0.28;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--color-cut-900) 0 1px,
+      transparent 1px 3px,
+      var(--color-cut-900) 3px 5px,
+      transparent 5px 6px,
+      var(--color-cut-900) 6px 7px,
+      transparent 7px 10px,
+      var(--color-cut-900) 10px 12px,
+      transparent 12px 14px
+    );
+  }
+  .ticket-hover {
+    transition:
+      transform 0.3s var(--ease-out-soft),
+      box-shadow 0.3s var(--ease-out-soft);
+  }
+  .ticket-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  /* Seat map dots. */
+  .seat {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+  }
+  .seat-taken {
+    background: radial-gradient(circle at 35% 35%, #ffe9b0, #fbb927 70%);
+    box-shadow: 0 0 8px rgba(251, 185, 39, 0.55);
+  }
+
   /* Gold rule under an opener, fading to the right. */
   .gold-rule {
     height: 3px;

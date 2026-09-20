@@ -1,19 +1,21 @@
 import Link from 'next/link';
 import { ArrowRight, CalendarDays, Gavel, MapPin, QrCode, Radio } from 'lucide-react';
+import { Atmosphere } from '@/components/brand/Atmosphere';
 import { Button } from '@/components/ui/button';
 import { formatEventDate } from '@/lib/dates';
+import { formatZAR } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import { StatusPill } from './StaffShell';
 
 /**
- * The featured event on the dashboard — DESIGN-SYSTEM §5.1 v2. A navy hero on
- * the `hero` gradient with the watermark, the event as a headline, and the
- * funnel as glass tiles. This is the one place on the console that is allowed
- * to be dramatic.
+ * The featured event on the dashboard — DESIGN-SYSTEM §5.1 v3. The ballroom of
+ * light behind it, the event as a headline, and the room drawn as seats that
+ * turn gold as guests arrive. The one dramatic element on the console.
  */
 export function EventHero({
   event,
   counts,
+  raised,
   canOrganise,
 }: {
   event: {
@@ -25,25 +27,26 @@ export function EventHero({
     auction_enabled: boolean;
   };
   counts: { invited: number; accepted: number; attendees: number; checkedIn: number };
+  raised: number | null;
   canOrganise: boolean;
 }) {
   const isLive = event.status === 'live';
-  const arrivalPct =
-    counts.attendees > 0 ? Math.round((counts.checkedIn / counts.attendees) * 100) : 0;
-  const acceptPct = counts.invited > 0 ? Math.round((counts.accepted / counts.invited) * 100) : 0;
+  const toCome = Math.max(0, counts.attendees - counts.checkedIn);
 
   return (
     <section
       aria-labelledby="hero-title"
-      className="bg-hero watermark shadow-hero relative overflow-hidden rounded-2xl text-white"
+      className="shadow-hero relative overflow-hidden rounded-2xl text-white"
     >
-      <div className="relative z-10 grid gap-8 p-7 sm:p-9 lg:grid-cols-[1.25fr_1fr] lg:gap-10 lg:p-10">
+      <Atmosphere intensity={0.75} />
+
+      <div className="relative z-10 grid gap-8 p-7 sm:p-9 lg:grid-cols-[1.2fr_1fr] lg:gap-12 lg:p-10">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
             <p className="eyebrow eyebrow-on-dark">{isLive ? 'Happening now' : 'Next event'}</p>
             <StatusPill status={event.status} />
             {event.auction_enabled ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[0.6875rem] font-bold tracking-[0.1em] text-white/85 uppercase">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-[0.6875rem] font-bold tracking-[0.1em] text-white/85 uppercase">
                 <Gavel className="size-3" aria-hidden /> Auction
               </span>
             ) : null}
@@ -68,6 +71,13 @@ export function EventHero({
               </div>
             ) : null}
           </dl>
+
+          {raised !== null ? (
+            <div className="mt-7">
+              <p className="text-[0.6875rem] font-bold tracking-[0.16em] text-white/55 uppercase">Raised so far</p>
+              <p className="numeral text-gold-metallic mt-1 text-[3rem]">{formatZAR(raised)}</p>
+            </div>
+          ) : null}
 
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild variant="gold" size="lg" className="h-11 px-5 text-[0.9375rem]">
@@ -94,26 +104,32 @@ export function EventHero({
           </div>
         </div>
 
+        {/* The room */}
         <div className="flex flex-col justify-between gap-6">
-          <div className="grid grid-cols-3 gap-3">
-            <GlassStat label="Invited" value={counts.invited} />
-            <GlassStat label="Accepted" value={counts.accepted} hint={`${acceptPct}%`} />
-            <GlassStat label="Checked in" value={counts.checkedIn} hint={`${arrivalPct}%`} gold />
+          <div>
+            <div className="flex items-baseline justify-between">
+              <p className="text-[0.6875rem] font-bold tracking-[0.16em] text-white/60 uppercase">The room</p>
+              <p className="text-sm text-white/60">
+                <span className="text-gold-500 font-semibold">{counts.checkedIn}</span> arrived ·{' '}
+                {toCome} to come
+              </p>
+            </div>
+            <SeatMap total={counts.attendees} taken={counts.checkedIn} className="mt-4" />
           </div>
 
-          <div>
-            <div className="flex items-baseline justify-between text-sm text-white/70">
-              <span>Arrivals</span>
-              <span className="tabular">
-                {counts.checkedIn} of {counts.attendees} expected
-              </span>
-            </div>
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-              <div
-                className="bg-gold-500 h-full rounded-full transition-[width] duration-700"
-                style={{ width: `${Math.min(100, arrivalPct)}%` }}
-              />
-            </div>
+          <div className="grid grid-cols-3 gap-3 border-t border-white/10 pt-5">
+            <Figure label="Invited" value={counts.invited} />
+            <Figure
+              label="Accepted"
+              value={counts.accepted}
+              hint={counts.invited ? `${Math.round((counts.accepted / counts.invited) * 100)}%` : undefined}
+            />
+            <Figure
+              label="Checked in"
+              value={counts.checkedIn}
+              hint={counts.attendees ? `${Math.round((counts.checkedIn / counts.attendees) * 100)}%` : undefined}
+              gold
+            />
           </div>
 
           <Link
@@ -121,10 +137,7 @@ export function EventHero({
             className="group inline-flex items-center gap-2 self-start text-sm font-semibold text-white/85 transition-colors hover:text-white"
           >
             Event overview
-            <ArrowRight
-              className="size-4 transition-transform group-hover:translate-x-0.5"
-              aria-hidden
-            />
+            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
           </Link>
         </div>
       </div>
@@ -132,24 +145,39 @@ export function EventHero({
   );
 }
 
-function GlassStat({
-  label,
-  value,
-  hint,
-  gold = false,
-}: {
-  label: string;
-  value: number;
-  hint?: string;
-  gold?: boolean;
-}) {
+/** Every expected guest is a seat; arrived seats are lit gold. Capped at 160. */
+function SeatMap({ total, taken, className }: { total: number; taken: number; className?: string }) {
+  const max = 160;
+  const shown = Math.max(1, Math.min(total, max));
+  const scale = total > max ? total / max : 1;
+  const filled = Math.round(taken / scale);
   return (
-    <div className="rounded-xl border border-white/10 bg-white/8 p-4 backdrop-blur-sm">
-      <p className="text-[0.6875rem] font-bold tracking-[0.12em] text-white/60 uppercase">{label}</p>
-      <p className={cn('numeral mt-2 text-[2.25rem]', gold ? 'text-gold-500' : 'text-white')}>
+    <div className={cn(className)}>
+      <div className="flex flex-wrap gap-[6px]" aria-hidden>
+        {Array.from({ length: shown }, (_, i) => (
+          <span
+            key={i}
+            className={cn('seat', i < filled && 'seat-taken')}
+            style={i < filled ? { animation: `fade-in 0.4s ease-out both`, animationDelay: `${i * 18}ms` } : undefined}
+          />
+        ))}
+      </div>
+      {total === 0 ? <p className="mt-2 text-sm text-white/55">No guests expected yet.</p> : null}
+      {total > max ? (
+        <p className="mt-2 text-xs text-white/45">Each seat stands for {Math.ceil(scale)} guests.</p>
+      ) : null}
+    </div>
+  );
+}
+
+function Figure({ label, value, hint, gold = false }: { label: string; value: number; hint?: string; gold?: boolean }) {
+  return (
+    <div>
+      <p className="text-[0.625rem] font-bold tracking-[0.14em] text-white/55 uppercase">{label}</p>
+      <p className={cn('numeral mt-1 text-[2rem]', gold ? 'text-gold-500' : 'text-white')}>
         {value}
+        {hint ? <span className="ml-1.5 text-sm font-semibold text-white/45">{hint}</span> : null}
       </p>
-      {hint ? <p className="mt-1 text-xs text-white/55">{hint}</p> : null}
     </div>
   );
 }

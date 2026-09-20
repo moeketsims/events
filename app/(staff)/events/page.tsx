@@ -1,16 +1,10 @@
 import Link from 'next/link';
-import { CalendarDays, Gavel, MapPin, Plus, Users } from 'lucide-react';
-import {
-  DateBlock,
-  PageHeader,
-  SectionHeading,
-  StaffShell,
-  StatusPill,
-} from '@/components/staff/StaffShell';
+import { CalendarDays, Plus } from 'lucide-react';
+import { PageHeader, SectionHeading, StaffShell } from '@/components/staff/StaffShell';
+import { Ticket } from '@/components/staff/Ticket';
 import { Button } from '@/components/ui/button';
 import { hasRole, requireStaff } from '@/lib/auth/staff';
 import { createClient } from '@/lib/supabase/server';
-import { formatEventDate } from '@/lib/dates';
 
 export const metadata = { title: 'Events' };
 
@@ -56,7 +50,7 @@ export default async function EventsPage() {
       />
 
       {grouped.length === 0 ? (
-        <div className="border-hairline-strong rounded-xl border border-dashed bg-white/60 p-12 text-center">
+        <div className="border-hairline-strong rounded-xl border border-dashed p-12 text-center">
           <CalendarDays className="text-cut-700/40 mx-auto size-10" aria-hidden />
           <p className="text-ink-900 mt-4 font-semibold">No events yet</p>
           <p className="text-ink-500 mx-auto mt-1 max-w-sm text-sm">
@@ -69,44 +63,10 @@ export default async function EventsPage() {
         grouped.map((group) => (
           <section key={group.status} className="mb-12">
             <SectionHeading eyebrow={group.status} title={group.label} />
-            <ul className="grid gap-4 md:grid-cols-2">
+            <ul className="grid gap-4 xl:grid-cols-2">
               {group.rows.map((event) => (
                 <li key={event.id}>
-                  <Link
-                    href={`/events/${event.id}`}
-                    className="card card-hover flex h-full flex-col p-5"
-                  >
-                    <div className="flex items-start gap-4">
-                      <DateBlock date={event.starts_at} />
-                      <div className="min-w-0 flex-1">
-                        <p className="font-display text-cut-900 text-[1.5rem] leading-tight font-semibold text-balance">
-                          {event.title}
-                        </p>
-                        <p className="text-ink-500 mt-1.5 text-sm">
-                          {formatEventDate(event.starts_at)}
-                        </p>
-                      </div>
-                      <StatusPill status={event.status} />
-                    </div>
-
-                    <div className="border-hairline text-ink-500 mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t pt-4 text-sm">
-                      {event.venue_name ? (
-                        <span className="inline-flex items-center gap-1.5">
-                          <MapPin className="text-cut-700 size-4" aria-hidden /> {event.venue_name}
-                        </span>
-                      ) : null}
-                      {event.capacity ? (
-                        <span className="inline-flex items-center gap-1.5">
-                          <Users className="text-cut-700 size-4" aria-hidden /> {event.capacity} seats
-                        </span>
-                      ) : null}
-                      {event.auction_enabled ? (
-                        <span className="text-cut-900 inline-flex items-center gap-1.5 font-semibold">
-                          <Gavel className="text-gold-600 size-4" aria-hidden /> Auction
-                        </span>
-                      ) : null}
-                    </div>
-                  </Link>
+                  <Ticket event={event} />
                 </li>
               ))}
             </ul>

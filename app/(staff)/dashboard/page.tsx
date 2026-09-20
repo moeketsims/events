@@ -1,19 +1,14 @@
 import Link from 'next/link';
-import { ArrowRight, CalendarDays, Plus, QrCode, Radio, Users } from 'lucide-react';
-import {
-  ActionCard,
-  DateBlock,
-  PageHeader,
-  SectionHeading,
-  StaffShell,
-  StatTile,
-  StatusPill,
-} from '@/components/staff/StaffShell';
+import { ArrowRight, Plus } from 'lucide-react';
+import { PageHeader, SectionHeading, StaffShell } from '@/components/staff/StaffShell';
+import { Arc, Ledger, LedgerFigure, SeatRow, StatusLegend } from '@/components/staff/Ledger';
+import { Desk } from '@/components/staff/Desk';
 import { EventHero } from '@/components/staff/EventHero';
+import { Ticket } from '@/components/staff/Ticket';
+import { Atmosphere } from '@/components/brand/Atmosphere';
 import { Button } from '@/components/ui/button';
 import { hasRole, requireStaff } from '@/lib/auth/staff';
 import { createClient } from '@/lib/supabase/server';
-import { formatEventDate } from '@/lib/dates';
 import { TIME_ZONE } from '@/lib/env';
 
 export const metadata = { title: 'Dashboard' };
@@ -28,31 +23,72 @@ const TODAY = new Intl.DateTimeFormat('en-ZA', {
 export default async function DashboardPage() {
   const profile = await requireStaff();
   const supabase = await createClient();
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400_000).toISOString();
 
   // RLS confines all of these to the signed-in user's department.
-  const [{ data: events }, { count: contactCount }] = await Promise.all([
+  const [{ data: events }, { count: contactCount }, { count: newContacts }] = await Promise.all([
     supabase
       .from('events')
-      .select('id, title, slug, starts_at, venue_name, status, auction_enabled')
+      .select('id, title, slug, starts_at, venue_name, status, auction_enabled, capacity')
       .in('status', ['published', 'live', 'draft'])
       .order('starts_at', { ascending: true })
       .limit(8),
     supabase.from('contacts').select('id', { count: 'exact', head: true }),
+    supabase
+      .from('contacts')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', thirtyDaysAgo),
   ]);
 
   const upcoming = events ?? [];
-  const liveCount = upcoming.filter((e) => e.status === 'live').length;
-  const featured = upcoming.find((e) => e.status === 'live') ?? upcoming.find((e) => e.status === 'published') ?? upcoming[0];
+  const statusCounts = upcoming.reduce<Record<string, number>>((acc, e) => {
+    acc[e.status] = (acc[e.status] ?? 0) + 1;
+    return acc;
+  }, {});
+  const liveCount = statusCounts.live ?? 0;
+  const featured =
+    upcoming.find((e) => e.status === 'live') ??
+    upcoming.find((e) => e.status === 'published') ??
+    upcoming[0];
   const rest = upcoming.filter((e) => e.id !== featured?.id);
 
-  const counts = featured
-    ? await featuredCounts(supabase, featured.id)
-    : { invited: 0, accepted: 0, attendees: 0, checkedIn: 0 };
+  const [counts, raised] = featured
+    ? await Promise.all([featuredCounts(supabase, featured.id), raisedFor(supabase, featured.id)])
+    : [{ invited: 0, accepted: 0, attendees: 0, checkedIn: 0 }, null];
+
+  const acceptance = counts.invited ? (counts.accepted / counts.invited) * 100 : 0;
 
   // Door staff cannot create events, so do not offer them the button: a control
   // that always ends in a 403 is worse than no control.
   const canOrganise = hasRole(profile, ['organiser']);
   const firstName = profile.fullName?.split(' ')[0] ?? 'there';
+
+  const desk = [
+    { href: '/scan', title: 'Open the scanner', description: 'Scan passes, search by name, register a walk-in.' },
+    ...(canOrganise
+      ? [
+          { href: '/contacts', title: 'Guest list', description: 'Import contacts, search, tag, add to an event.' },
+          ...(featured
+            ? [
+                {
+                  href: `/events/${featured.id}/broadcasts`,
+                  title: 'Broadcast desk',
+                  description: 'Reach everyone who has arrived, in-app and on WhatsApp.',
+                },
+              ]
+            : []),
+          ...(featured?.auction_enabled
+            ? [
+                {
+                  href: `/events/${featured.id}/auction/console`,
+                  title: 'Auction console',
+                  description: 'Open and close lots, reveal a bidder, void a bid, switch the screen.',
+                },
+              ]
+            : []),
+        ]
+      : []),
+  ];
 
   return (
     <StaffShell profile={profile}>
@@ -76,42 +112,40 @@ export default async function DashboardPage() {
       />
 
       {featured ? (
-        <EventHero event={featured} counts={counts} canOrganise={canOrganise} />
+        <EventHero event={featured} counts={counts} raised={raised} canOrganise={canOrganise} />
       ) : (
         <EmptyHero canCreate={canOrganise} />
       )}
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile
+      <Ledger className="mt-10">
+        <LedgerFigure
           label="Events"
           value={upcoming.length}
-          hint="Open in your department"
-          icon={<CalendarDays className="size-4" aria-hidden />}
+          note="Open in your department"
+          visual={<StatusLegend counts={statusCounts} />}
         />
-        <StatTile
-          label="Live now"
-          value={liveCount}
-          hint={liveCount > 0 ? 'Doors open' : 'Nothing live'}
-          icon={<Radio className="size-4" aria-hidden />}
-          tone="gold"
+        <LedgerFigure
+          label="Acceptance"
+          value={Math.round(acceptance)}
+          unit="%"
+          note={featured ? `${counts.accepted} of ${counts.invited} invited` : 'No event featured'}
+          visual={<Arc percent={acceptance} />}
         />
-        <StatTile
-          label="Accepted"
-          value={counts.accepted}
-          hint={featured ? `of ${counts.invited} invited` : undefined}
-          icon={<Users className="size-4" aria-hidden />}
-          tone="green"
+        <LedgerFigure
+          label="Arrivals"
+          value={counts.checkedIn}
+          unit={`/ ${counts.attendees}`}
+          note={liveCount > 0 ? 'Doors open' : 'Doors not yet open'}
+          visual={<SeatRow taken={counts.checkedIn} total={counts.attendees} />}
         />
-        <StatTile
+        <LedgerFigure
           label="Contacts"
           value={contactCount ?? 0}
-          hint="In your department"
-          icon={<Users className="size-4" aria-hidden />}
-          tone="sky"
+          note={`${newContacts ?? 0} added in the last 30 days`}
         />
-      </div>
+      </Ledger>
 
-      <div className="mt-12 grid gap-10 lg:grid-cols-[1.4fr_1fr]">
+      <div className="mt-14 grid gap-12 lg:grid-cols-[1.4fr_1fr]">
         <section>
           <SectionHeading
             eyebrow="Calendar"
@@ -127,9 +161,9 @@ export default async function DashboardPage() {
           />
 
           {rest.length === 0 ? (
-            <div className="border-hairline-strong rounded-xl border border-dashed bg-white/60 p-8 text-center">
+            <div className="border-hairline-strong rounded-xl border border-dashed p-8 text-center">
               <p className="text-ink-900 font-semibold">
-                {featured ? 'Nothing else scheduled' : 'No events yet'}
+                {featured ? 'Nothing else on the calendar' : 'No events yet'}
               </p>
               <p className="text-ink-500 mx-auto mt-1 max-w-sm text-sm">
                 {canOrganise
@@ -138,25 +172,10 @@ export default async function DashboardPage() {
               </p>
             </div>
           ) : (
-            <ul className="space-y-3">
+            <ul className="space-y-4">
               {rest.map((event) => (
                 <li key={event.id}>
-                  <Link
-                    href={`/events/${event.id}`}
-                    className="card card-hover flex items-center gap-5 p-4"
-                  >
-                    <DateBlock date={event.starts_at} />
-                    <div className="min-w-0 flex-1">
-                      <p className="font-display text-cut-900 truncate text-[1.375rem] leading-tight font-semibold">
-                        {event.title}
-                      </p>
-                      <p className="text-ink-500 mt-1 truncate text-sm">
-                        {formatEventDate(event.starts_at)}
-                        {event.venue_name ? ` · ${event.venue_name}` : ''}
-                      </p>
-                    </div>
-                    <StatusPill status={event.status} className="hidden sm:inline-flex" />
-                  </Link>
+                  <Ticket event={event} />
                 </li>
               ))}
             </ul>
@@ -164,41 +183,18 @@ export default async function DashboardPage() {
         </section>
 
         <section>
-          <SectionHeading eyebrow="Tonight" title="At the door" />
-          <div className="space-y-3">
-            <ActionCard
-              href="/scan"
-              icon={<QrCode className="size-5" aria-hidden />}
-              title="Open the scanner"
-              description="Scan passes, search by name, register a walk-in."
-            />
-            {canOrganise ? (
-              <>
-                <ActionCard
-                  href="/contacts"
-                  icon={<Users className="size-5" aria-hidden />}
-                  title="Guest list"
-                  description="Import contacts, search, tag, add to an event."
-                />
-                {featured ? (
-                  <ActionCard
-                    href={`/events/${featured.id}/broadcasts`}
-                    icon={<Radio className="size-5" aria-hidden />}
-                    title="Broadcast desk"
-                    description="Reach everyone who has arrived, in-app and on WhatsApp."
-                  />
-                ) : null}
-              </>
-            ) : null}
-          </div>
+          <SectionHeading eyebrow="Tonight" title="The desk" />
+          <Desk items={desk} />
         </section>
       </div>
     </StaffShell>
   );
 }
 
+type Client = Awaited<ReturnType<typeof createClient>>;
+
 async function featuredCounts(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: Client,
   eventId: string,
 ): Promise<{ invited: number; accepted: number; attendees: number; checkedIn: number }> {
   const [invited, accepted, attendees, checkedIn] = await Promise.all([
@@ -223,11 +219,21 @@ async function featuredCounts(
   };
 }
 
+/** Total raised for the event's auction, or null when there is no auction. */
+async function raisedFor(supabase: Client, eventId: string): Promise<number | null> {
+  const { data: auction } = await supabase.from('auctions').select('id').eq('event_id', eventId).maybeSingle();
+  if (!auction) return null;
+  const { data } = await supabase
+    .from('auction_totals')
+    .select('total_raised')
+    .eq('auction_id', auction.id)
+    .maybeSingle();
+  return Number(data?.total_raised ?? 0);
+}
+
 function daypart(): string {
   const hour = Number(
-    new Intl.DateTimeFormat('en-ZA', { timeZone: TIME_ZONE, hour: 'numeric', hour12: false }).format(
-      new Date(),
-    ),
+    new Intl.DateTimeFormat('en-ZA', { timeZone: TIME_ZONE, hour: 'numeric', hour12: false }).format(new Date()),
   );
   if (hour < 12) return 'morning';
   if (hour < 17) return 'afternoon';
@@ -236,7 +242,8 @@ function daypart(): string {
 
 function EmptyHero({ canCreate }: { canCreate: boolean }) {
   return (
-    <section className="bg-hero watermark shadow-hero relative overflow-hidden rounded-2xl p-10 text-white">
+    <section className="shadow-hero relative overflow-hidden rounded-2xl p-10 text-white">
+      <Atmosphere intensity={0.75} />
       <div className="relative z-10 max-w-xl">
         <p className="eyebrow eyebrow-on-dark">Getting started</p>
         <h2 className="font-display mt-4 text-4xl leading-none font-bold sm:text-5xl">
@@ -258,3 +265,4 @@ function EmptyHero({ canCreate }: { canCreate: boolean }) {
     </section>
   );
 }
+

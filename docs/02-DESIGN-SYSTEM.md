@@ -99,8 +99,15 @@ The first build was a default component kit with brand colours dropped in. This 
 - Sidebar 268 px, `bg-shell`, logo on a white plate with a dark drop shadow (`--shadow-plate`), "Workspace" micro-label, nav rows 40 px with an 18 px icon; the active row is `white/10` with a 3 px gold bar on the left and a gold icon. Footer: initials avatar (gold disc, navy letters, gold ring), name, role · department, icon-only sign-out.
 - Content max 1200 px, 48 px side padding on desktop, fades up on load (`animate-fade-up`, 550 ms, soft ease). Page footer line: motto in condensed navy, then the university name in `ink-500`.
 
-**Components introduced** (`components/staff/StaffShell.tsx`, `EventHero.tsx`, `components/brand/BrandPanel.tsx`)
-- `PageHeader` (eyebrow, display title, description, action), `SectionHeading`, `StatTile` (icon chip with `tone`, display numeral), `StatusPill`, `DateBlock` (calendar leaf: day numeral over month), `ActionCard`, `EventHero` (navy hero with funnel glass tiles and arrivals bar), `BrandPanel` (login and landing left panel).
+**Card vocabulary (v3, binding).** A row of identical white boxes with an icon chip is the signature of a generated dashboard and is banned. Every card on the console is a form borrowed from events and giving:
+- **Ledger** (`Ledger.tsx`): figures set like a printed programme. No boxes. A band with top and bottom rules, columns separated by vertical gold hairlines, each holding a small-caps label, a 52 px numeral, a one-line note, and a *true drawing* of the figure: a ring gauge (`Arc`) for a percentage, a seat row (`SeatRow`) for arrivals, a status legend for events. If a figure has no honest drawing, it has none.
+- **Ticket** (`Ticket.tsx`): an event is a ticket. Date on a tinted stub (weekday, day numeral, month), a dashed perforation with two notches, the body with an "ADMIT" micro-label, status, title, date, venue, seats, and a barcode edge. Used on the dashboard calendar and the events page.
+- **Seat map** (in `EventHero`): every expected guest is a seat; arrived seats light gold with a glow, in arrival order, capped at 160 with a scale note. The room fills as the night goes on.
+- **Desk** (`Desk.tsx`): what staff do tonight as numbered rows, 01 02 03 in gold condensed numerals, hairline separators, an arrow that steps forward on hover. No stacked boxes.
+- **Hero** (`EventHero.tsx`): carries the ballroom of light (`Atmosphere` at 0.75), the headline, "Raised so far" in metallic gold when there is an auction, the seat map, and three figures under a hairline.
+
+**Components** (`components/staff/`)
+- `PageHeader` (eyebrow, display title, description, action), `SectionHeading`, `StatusPill`, `DateBlock`, `Ledger` + `LedgerFigure` + `Arc` + `SeatRow` + `StatusLegend`, `Ticket`, `Desk`, `EventHero`. `StatTile` and `ActionCard` remain exported for legacy use only and must not appear on new pages.
 - Button variants added: `gold` (primary on navy) and `onDark` (glass secondary on navy).
 - Tables inside a card use `.table-card`: caps header on `cut-50`, hairline rows, row hover tint.
 
