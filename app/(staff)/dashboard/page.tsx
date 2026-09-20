@@ -97,8 +97,12 @@ export default async function DashboardPage() {
         title={`Good ${daypart()}, ${firstName}`}
         description={
           liveCount > 0
-            ? 'Doors are open. The scanner and the broadcast desk are one tap away.'
-            : 'Here is where your department stands across invitations, arrivals and giving.'
+            ? canOrganise
+              ? 'Doors are open. The scanner and the broadcast desk are one tap away.'
+              : 'Doors are open. The scanner is one tap away.'
+            : canOrganise
+              ? 'Here is where your department stands across invitations, arrivals and giving.'
+              : 'Here is what is on the calendar for your department.'
         }
         action={
           canOrganise ? (
@@ -138,11 +142,19 @@ export default async function DashboardPage() {
           note={liveCount > 0 ? 'Doors open' : 'Doors not yet open'}
           visual={<SeatRow taken={counts.checkedIn} total={counts.attendees} />}
         />
-        <LedgerFigure
-          label="Contacts"
-          value={contactCount ?? 0}
-          note={`${newContacts ?? 0} added in the last 30 days`}
-        />
+        {canOrganise ? (
+          <LedgerFigure
+            label="Contacts"
+            value={contactCount ?? 0}
+            note={`${newContacts ?? 0} added in the last 30 days`}
+          />
+        ) : (
+          <LedgerFigure
+            label="Your role"
+            value="Door"
+            note="Scan passes, search by name, register walk-ins"
+          />
+        )}
       </Ledger>
 
       <div className="mt-14 grid gap-12 lg:grid-cols-[1.4fr_1fr]">

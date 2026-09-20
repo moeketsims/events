@@ -46,7 +46,9 @@ export function StaffShell({
   return (
     <div className="bg-canvas min-h-dvh lg:flex">
       <aside className="bg-shell watermark relative overflow-hidden text-white lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-[268px] lg:shrink-0 lg:flex-col">
-        <div className="relative z-10 flex items-center justify-between gap-4 px-5 pt-5 lg:block lg:px-5">
+        {/* Below lg the nav sits on its own scrollable row under the logo, so the
+            plate never squeezes the links. */}
+        <div className="relative z-10 flex flex-col gap-4 px-5 pt-5 lg:block lg:px-5">
           <Link
             href="/dashboard"
             aria-label="CUT Events dashboard"
