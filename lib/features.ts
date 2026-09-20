@@ -15,7 +15,7 @@
  */
 export const FEATURES = {
   broadcasts: true,
-  auction: false,
+  auction: true,
   bidding: false,
   console: false,
   results: false,

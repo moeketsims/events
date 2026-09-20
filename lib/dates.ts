@@ -77,3 +77,32 @@ export function formatCountdown(msRemaining: number): string {
 export function formatBidderNumber(n: number | null | undefined): string {
   return n === null || n === undefined ? '—' : String(n).padStart(3, '0');
 }
+
+/**
+ * A `timestamptz` back into the `YYYY-MM-DDTHH:mm` a datetime-local input
+ * wants, rendered in SAST. Doing this with `toISOString().slice(0,16)` would
+ * show the organiser 16:00 for an event that starts at 18:00.
+ */
+export function toDateTimeLocal(value: string | Date | null | undefined): string {
+  const date = toDate(value);
+  if (!date) return '';
+  const parts = new Intl.DateTimeFormat('en-ZA', {
+    timeZone: TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? '';
+  // en-ZA formats hour 24 as "24" at midnight; the input wants "00".
+  const hour = get('hour') === '24' ? '00' : get('hour');
+  return `${get('year')}-${get('month')}-${get('day')}T${hour}:${get('minute')}`;
+}
+
+/** A `datetime-local` value carries no zone; the organiser means SAST (UTC+2, no DST). */
+export function fromDateTimeLocal(local: string): string {
+  return new Date(`${local}:00+02:00`).toISOString();
+}

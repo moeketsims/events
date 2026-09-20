@@ -16,6 +16,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { resizeImage } from '@/lib/images';
+import { toDateTimeLocal } from '@/lib/dates';
 import { setEventStatus, updateEvent, uploadBanner, type EventActionState } from './actions';
 import { NEXT_STATUS, STATUS_ACTION_LABEL, STATUS_MEANING, type EventStatus } from './status';
 
@@ -33,28 +35,6 @@ export type EditableEvent = {
   auction_enabled: boolean;
   status: EventStatus;
 };
-
-/**
- * A `timestamptz` back into the `YYYY-MM-DDTHH:mm` a datetime-local input wants,
- * rendered in SAST. Doing this with `toISOString().slice(0,16)` would show the
- * organiser 16:00 for an event that starts at 18:00.
- */
-function toLocalInput(value: string | null): string {
-  if (!value) return '';
-  const parts = new Intl.DateTimeFormat('en-ZA', {
-    timeZone: 'Africa/Johannesburg',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(new Date(value));
-  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
-  // en-ZA formats hour 24 as "24" at midnight; the input wants "00".
-  const hour = get('hour') === '24' ? '00' : get('hour');
-  return `${get('year')}-${get('month')}-${get('day')}T${hour}:${get('minute')}`;
-}
 
 function Feedback({ state }: { state: EventActionState }) {
   if (state.error) {
@@ -133,7 +113,7 @@ export function EditEventDialog({ event }: { event: EditableEvent }) {
                 name="startsAt"
                 type="datetime-local"
                 required
-                defaultValue={toLocalInput(event.starts_at)}
+                defaultValue={toDateTimeLocal(event.starts_at)}
               />
             </div>
             <div className="space-y-1.5">
@@ -142,7 +122,7 @@ export function EditEventDialog({ event }: { event: EditableEvent }) {
                 id="endsAt"
                 name="endsAt"
                 type="datetime-local"
-                defaultValue={toLocalInput(event.ends_at)}
+                defaultValue={toDateTimeLocal(event.ends_at)}
               />
             </div>
           </div>
@@ -154,7 +134,7 @@ export function EditEventDialog({ event }: { event: EditableEvent }) {
                 id="rsvpDeadline"
                 name="rsvpDeadline"
                 type="datetime-local"
-                defaultValue={toLocalInput(event.rsvp_deadline)}
+                defaultValue={toDateTimeLocal(event.rsvp_deadline)}
               />
               <p className="text-ink-500 text-sm">After this, the RSVP link stops accepting.</p>
             </div>
@@ -253,8 +233,6 @@ export function StatusControls({ event }: { event: { id: string; status: EventSt
   );
 }
 
-const MAX_EDGE = 1600;
-
 /**
  * Banner upload. The image is resized in the browser to 1600 px on its longest
  * edge before it is sent (BUILD-SPEC §11b): a 6 MB photo straight off a phone
@@ -275,7 +253,7 @@ export function BannerUpload({ eventId }: { eventId: string }) {
     setLocalError(null);
     setBusy(true);
     try {
-      const resized = await resize(file);
+      const resized = await resizeImage(file);
       const data = new DataTransfer();
       data.items.add(resized);
       if (fileInput.current) fileInput.current.files = data.files;
@@ -316,30 +294,4 @@ export function BannerUpload({ eventId }: { eventId: string }) {
       )}
     </form>
   );
-}
-
-/** Longest edge to 1600 px, re-encoded as JPEG. Returns the original if smaller. */
-async function resize(file: File): Promise<File> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
-
-  if (scale === 1 && file.size <= 1_500_000) {
-    bitmap.close();
-    return file;
-  }
-
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('no 2d context');
-  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-
-  const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, 'image/jpeg', 0.85),
-  );
-  if (!blob) throw new Error('encode failed');
-
-  return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
 }

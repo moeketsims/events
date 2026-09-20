@@ -6,14 +6,10 @@ import { requireStaff } from '@/lib/auth/staff';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { SUPABASE_URL } from '@/lib/env';
+import { fromDateTimeLocal as sastToIso } from '@/lib/dates';
 import { NEXT_STATUS } from './status';
 
 export type EventActionState = { error?: string; notice?: string };
-
-/** A `datetime-local` value carries no zone; the organiser means SAST. */
-function sastToIso(local: string): string {
-  return new Date(`${local}:00+02:00`).toISOString();
-}
 
 const updateSchema = z.object({
   eventId: z.uuid(),
