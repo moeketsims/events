@@ -8,6 +8,14 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   : undefined;
 
 const nextConfig: NextConfig = {
+  // A production build must never be written into the directory a running dev
+  // server is serving from: both write `.next`, and a build underneath a live
+  // dev server leaves it serving pages whose client chunks 404, so nothing
+  // hydrates (CLAUDE.md). `NEXT_DIST_DIR=.next-prod pnpm build` gives the
+  // build its own directory, so a production check can be run without stopping
+  // development.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
+
   experimental: {
     serverActions: {
       // CSV pastes and lot image uploads exceed the 1 MB default (BUILD-SPEC §11b).

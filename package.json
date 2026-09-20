@@ -10,6 +10,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:check": "cross-env NEXT_DIST_DIR=.next-prod next build",
+    "start:check": "cross-env NEXT_DIST_DIR=.next-prod next start -p 3100",
     "start": "next start",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -53,6 +55,7 @@
     "@types/qrcode": "^1.5.5",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
+    "cross-env": "^10.1.0",
     "dotenv": "^18.0.1",
     "eslint": "^9.36.0",
     "eslint-config-next": "15.5.25",

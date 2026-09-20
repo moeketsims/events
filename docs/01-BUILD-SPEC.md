@@ -775,7 +775,7 @@ create policy "public read event-banners" on storage.objects for select to publi
 |---|---|---|
 | Staff | Supabase Auth email OTP (6-digit code) via `@supabase/ssr` cookies. Profiles carry `role` and `department_id`. | Standard Supabase session; `requireStaff(['organiser'])` in server components and actions redirects or 403s. |
 | Door staff | Same as staff, role `door_staff`. | Same. |
-| Attendee | **No account.** Identity is the signed pass token in the URL `/p/{token}`. The layout sets an `httpOnly`, `SameSite=Lax` cookie `cut_pass={token}` so sub-pages and the bid endpoint can read it without the token leaking into analytics referrers. | Cookie lifetime: event end + 30 days. |
+| Attendee | **No account.** Identity is the signed pass token in the URL `/p/{token}`. `middleware.ts` sets an `httpOnly`, `SameSite=Lax` cookie `cut_pass={token}` so sub-pages and the bid endpoint can read it without the token leaking into analytics referrers. (Not the layout: Next 15 forbids writing a cookie from a Server Component. The middleware returns before building a Supabase client, so `/p` pays nothing for the staff session refresh.) The cookie is a convenience, never an authorisation — every consumer re-verifies the HMAC. | Cookie lifetime: 90 days. |
 | Invitee | Signed RSVP token in `/rsvp/{token}`. | None; each request re-verifies. |
 | Projection | `/display/{auctionId}?k={display_key}`; the route compares `k` with `auctions.display_key` using the admin client. | Cookie `cut_display` for 24h so a reload does not need the key. |
 

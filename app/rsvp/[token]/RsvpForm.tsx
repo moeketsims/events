@@ -140,7 +140,7 @@ export function RsvpForm(props: RsvpFormProps) {
                         htmlFor={`guestName-${i}`}
                         className="mb-1.5 block text-sm text-white/70"
                       >
-                        Guest {i + 1}&rsquo;s name <span className="text-white/40">(optional)</span>
+                        Guest {i + 1}&rsquo;s name <span className="text-white/60">(optional)</span>
                       </label>
                       <input
                         id={`guestName-${i}`}
@@ -177,7 +177,7 @@ export function RsvpForm(props: RsvpFormProps) {
           <span>{props.consentWording}</span>
         </label>
         {!props.hasPhone ? (
-          <p className="mt-2 pl-7 text-xs text-white/40">
+          <p className="mt-2 pl-7 text-xs text-white/60">
             We do not have a number for you, so this covers email only.
           </p>
         ) : null}
@@ -249,7 +249,7 @@ function Choice({
         aria-hidden
         className={
           'flex size-7 shrink-0 items-center justify-center rounded-full ' +
-          (checked ? 'bg-gold-500 text-cut-950' : 'bg-white/10 text-white/50')
+          (checked ? 'bg-gold-500 text-cut-950' : 'bg-white/10 text-white/60')
         }
       >
         {icon}
@@ -271,14 +271,16 @@ function Question({
   const chosen = Array.isArray(value) ? value : value ? [value] : [];
 
   if (question.type === 'boolean') {
+    // min-h-11 so the row is a 44 px target on a phone rather than a 23 px one:
+    // the checkbox itself is 16 px, and the label is what a thumb actually hits.
     return (
-      <label className="flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-white/75">
+      <label className="flex min-h-11 cursor-pointer items-center gap-3 py-2 text-sm leading-relaxed text-white/75">
         <input
           type="checkbox"
           name={name}
           value="yes"
           defaultChecked={chosen.includes('yes')}
-          className="accent-gold-500 mt-1 size-4 shrink-0"
+          className="accent-gold-500 size-4 shrink-0"
         />
         <span>{question.label}</span>
       </label>
@@ -428,7 +430,7 @@ function Outcome({
         <CalendarPlus className="size-4" aria-hidden /> Add to my calendar
       </a>
 
-      <p className="mt-6 text-sm text-white/50">
+      <p className="mt-6 text-sm text-white/60">
         {result.sent?.email || result.sent?.whatsapp
           ? `We have sent it to you${result.sent.email ? ' by email' : ''}${
               result.sent.email && result.sent.whatsapp ? ' and' : ''
@@ -437,7 +439,7 @@ function Outcome({
       </p>
 
       {auctionEnabled ? (
-        <p className="mt-2 text-sm text-white/50">
+        <p className="mt-2 text-sm text-white/60">
           Bidding opens once you have checked in at the door.
         </p>
       ) : null}

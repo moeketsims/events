@@ -85,7 +85,7 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
           <span className="shadow-plate inline-flex rounded-xl bg-white p-2.5">
             <Logo variant="horizontal" size="sm" priority />
           </span>
-          <p className="text-right text-[0.6875rem] font-bold tracking-[0.16em] text-white/50 uppercase">
+          <p className="text-right text-[0.6875rem] font-bold tracking-[0.16em] text-white/60 uppercase">
             Institutional
             <br />
             Advancement
@@ -122,7 +122,7 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
                   <dd>
                     {event.venue_name}
                     {event.venue_address ? (
-                      <span className="block text-white/50">{event.venue_address}</span>
+                      <span className="block text-white/60">{event.venue_address}</span>
                     ) : null}
                   </dd>
                 </div>
@@ -140,7 +140,7 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
 
             {event.rsvp_deadline && !closed ? (
               <p
-                className="reveal mt-8 text-sm text-white/45"
+                className="reveal mt-8 text-sm text-white/60"
                 style={{ '--reveal-delay': '0.45s' } as React.CSSProperties}
               >
                 Please reply by {formatEventDate(event.rsvp_deadline)}.
@@ -195,7 +195,7 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
         </div>
 
         <footer className="mt-20 border-t border-white/10 pt-8 text-center">
-          <ul className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[0.6875rem] font-semibold tracking-[0.14em] text-white/45 uppercase">
+          <ul className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[0.6875rem] font-semibold tracking-[0.14em] text-white/60 uppercase">
             {PILLARS.map((pillar, i) => (
               <li key={pillar} className="inline-flex items-center gap-6">
                 {i > 0 ? (
@@ -210,7 +210,7 @@ export default async function RsvpPage({ params }: { params: Promise<{ token: st
           <p className="font-display text-gold-500 mt-6 text-base font-semibold tracking-wide">
             Thinking Beyond
           </p>
-          <p className="mt-2 text-sm text-white/40">
+          <p className="mt-2 text-sm text-white/60">
             Central University of Technology, Free State · Bloemfontein +27 51 507 3911 · Welkom +27
             57 910 3500
           </p>

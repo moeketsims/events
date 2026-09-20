@@ -11,6 +11,9 @@ const eslintConfig = [
   {
     ignores: [
       '.next/**',
+      // A production build run with NEXT_DIST_DIR (see next.config.ts) so it
+      // does not disturb a running dev server. Build output, never linted.
+      '.next-*/**',
       'out/**',
       'build/**',
       'next-env.d.ts',
