@@ -12,6 +12,10 @@ const nextConfig: NextConfig = {
     },
   },
   images: {
+    // The logo is served at quality 90: it is a flat mark with fine lettering
+    // and JPEG ringing at 75 is visible on the "Central University of
+    // Technology" line. Next 16 requires declared qualities.
+    qualities: [75, 90],
     remotePatterns: supabaseHost
       ? [{ protocol: 'https', hostname: supabaseHost, pathname: '/storage/v1/object/public/**' }]
       : [],

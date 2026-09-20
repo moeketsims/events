@@ -242,6 +242,14 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# The magic-link template MUST contain {{ .Token }} or the six-digit code the
+# /login form asks for is never delivered — the default template carries only a
+# link. BUILD-SPEC §4.9. Keep the dev and production dashboards in step with
+# this file by hand; email templates are not part of a migration.
+[auth.email.template.magic_link]
+subject = "Your CUT Events sign-in code"
+content_path = "./supabase/templates/magic-link.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"

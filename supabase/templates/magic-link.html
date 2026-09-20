@@ -1,0 +1,130 @@
+<!--
+  Supabase Auth "Magic Link" template. BUILD-SPEC §4.9.
+
+  {{ .Token }} is the part that matters: without it Supabase sends only a link
+  and the six-digit code the /login form asks for never reaches the guest. The
+  link is kept as well so a staff member can use either.
+
+  This file configures the LOCAL stack through supabase/config.toml. The dev and
+  production projects are configured in the dashboard under
+  Authentication -> Emails -> Magic Link, and must be kept in step with this
+  file by hand — templates are not part of a migration.
+-->
+<table
+  role="presentation"
+  width="100%"
+  cellpadding="0"
+  cellspacing="0"
+  style="background: #f3f7fb; padding: 24px 0; font-family: Arial, Helvetica, sans-serif"
+>
+  <tr>
+    <td align="center">
+      <table
+        role="presentation"
+        width="600"
+        cellpadding="0"
+        cellspacing="0"
+        style="width: 600px; max-width: 100%; background: #ffffff; border-collapse: collapse"
+      >
+        <tr>
+          <td style="padding: 24px 32px 16px 32px; border-bottom: 6px solid #003261">
+            <img
+              src="{{ .SiteURL }}/brand/logo-h-sm.png"
+              width="175"
+              alt="Central University of Technology, Free State"
+              style="display: block; border: 0"
+            />
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding: 32px">
+            <h1
+              style="
+                margin: 0 0 16px 0;
+                font-size: 28px;
+                line-height: 1.2;
+                color: #003261;
+                font-weight: bold;
+              "
+            >
+              Your sign-in code
+            </h1>
+
+            <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.5; color: #374151">
+              Enter this code on the CUT Events sign-in page. It is valid for a few minutes and can
+              be used once.
+            </p>
+
+            <p
+              style="
+                margin: 0 0 24px 0;
+                font-size: 40px;
+                line-height: 1;
+                letter-spacing: 0.2em;
+                color: #003261;
+                font-weight: bold;
+                text-align: center;
+                background: #e6eef6;
+                padding: 20px;
+                border-radius: 8px;
+              "
+            >
+              {{ .Token }}
+            </p>
+
+            <p style="margin: 0 0 8px 0; font-size: 16px; line-height: 1.5; color: #374151">
+              Or sign in with one tap:
+            </p>
+
+            <table role="presentation" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="background: #003261; border-radius: 6px">
+                  <a
+                    href="{{ .ConfirmationURL }}"
+                    style="
+                      display: inline-block;
+                      padding: 14px 28px;
+                      font-size: 16px;
+                      color: #ffffff;
+                      text-decoration: none;
+                      font-weight: bold;
+                      line-height: 20px;
+                    "
+                    >Sign in to CUT Events</a
+                  >
+                </td>
+              </tr>
+            </table>
+
+            <p style="margin: 24px 0 0 0; font-size: 14px; line-height: 1.4; color: #6b7280">
+              If you did not ask to sign in, ignore this message. Nobody can use the code without
+              your inbox.
+            </p>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding: 24px 32px; border-top: 1px solid #d1d5db; background: #f3f7fb">
+            <p
+              style="
+                margin: 0 0 8px 0;
+                font-size: 18px;
+                color: #003261;
+                font-weight: bold;
+                letter-spacing: 0.02em;
+              "
+            >
+              Thinking Beyond
+            </p>
+            <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #6b7280">
+              Central University of Technology, Free State<br />
+              Bloemfontein +27 51 507 3911 &middot; Welkom +27 57 910 3500<br />
+              <a href="https://www.cut.ac.za" style="color: #004b88">www.cut.ac.za</a>
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>

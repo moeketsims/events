@@ -63,15 +63,28 @@ Run `pnpm lint && pnpm typecheck && pnpm test` before every push.
 | `/display/[auctionId]?k=…` | Projection laptop | Display key on the auction row |
 | `/styleguide` | Developers | Development builds only |
 
+### Running against a local Supabase stack
+
+The dev project is not required to work on the schema or on staff auth. With Docker running:
+
+```bash
+supabase start          # ports 545xx, chosen to avoid a clash with other local projects
+supabase db reset       # re-apply every migration from empty
+```
+
+`supabase start` prints the local URL and keys; put them in `.env.local`. Outgoing mail is captured by Mailpit at http://127.0.0.1:54524, which is where the six-digit sign-in code appears.
+
+Schema changes are verified with the two scripts in [`supabase/tests/`](supabase/tests/README.md) — see that README.
+
 ### Supabase dashboard configuration
 
-These are one-time settings that are **not** in a migration because they are not schema (BUILD-SPEC §4.9). Record any change here.
+One-time settings that are **not** in a migration because they are not schema (BUILD-SPEC §4.9). The local stack configures the equivalents in `supabase/config.toml`; the dev and production projects must be set by hand in the dashboard and kept in step.
 
 - [ ] **Auth → SMTP**: custom SMTP configured. The built-in mailer is limited to a few messages an hour on the free tier and will break OTP login during a demo. Resend: `smtp.resend.com`, port 465, user `resend`, password = the Resend API key, sender = `EMAIL_FROM`. Brevo: the Brevo SMTP relay instead.
-- [ ] **Auth → Email templates → Magic Link**: includes `{{ .Token }}` so the 6-digit code is delivered, and keeps `{{ .ConfirmationURL }}` so the link still works.
+- [ ] **Auth → Email templates → Magic Link**: paste [`supabase/templates/magic-link.html`](supabase/templates/magic-link.html), subject "Your CUT Events sign-in code". It **must** contain `{{ .Token }}`: the stock template carries only a link, so without it the six-digit code the sign-in form asks for is never delivered. `{{ .ConfirmationURL }}` is kept so the link works too.
 - [ ] **Auth → URL configuration**: Site URL = `NEXT_PUBLIC_APP_URL`; redirect URLs include `http://localhost:3000/**` and the Vercel preview pattern.
-- [ ] **Auth → Providers → Email**: public sign-ups disabled. Staff accounts are created by the seed or by a platform admin in `/settings`.
-- [ ] **Realtime**: public channels allowed, so `realtime.send` reaches the projection and attendee pages. If this cannot be enabled, set `NEXT_PUBLIC_REALTIME_MODE=poll`.
+- [x] **Auth → Providers → Email**: public sign-ups disabled — `enable_signup = false` locally, and the sign-in action passes `shouldCreateUser: false` so a typo cannot silently create an account with no department or role. Staff accounts come from the seed or from a platform admin in `/settings`.
+- [x] **Realtime**: `realtime.send` confirmed working on the local stack by `select realtime_selftest()`. Re-confirm on the dev project; if public channels cannot be enabled there, set `NEXT_PUBLIC_REALTIME_MODE=poll`.
 
 ## Assets
 

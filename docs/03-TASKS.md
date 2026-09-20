@@ -55,12 +55,24 @@ Prerequisites the **user** must supply before Week 1 finishes (the agent should 
   - Supabase grants `EXECUTE` on new public functions to `anon` and `authenticated`. Every `SECURITY DEFINER` function is now revoked from those roles and granted to `service_role` alone. Without this, anyone with the publishable key could call `place_bid` straight from a browser, which is the one rule CLAUDE.md states outright.
 - **Additions beyond the spec listing:** `check_in_attendee` takes `p_event_id` so it can return the `wrong_event` result §7.2 promises; `void_bid`, `set_display_mode`, `log_audit`, `notify_broadcast` and `realtime_selftest` are written out; `check_in_attendee` moves an event from `published` to `live` on the first arrival, which T2.2 asks for.
 
-### T1.4 Supabase clients and staff auth
+### T1.4 Supabase clients and staff auth ✅ (dev-project SMTP pending the email key)
 - `lib/supabase/{client,server,admin}.ts` per BUILD-SPEC §1; `middleware.ts` refreshing sessions.
 - `/login` with email OTP (request code, verify code), `requireStaff(roles)` helper, `/dashboard` placeholder that shows the signed-in profile and role.
 - Supabase Auth configuration per BUILD-SPEC §4.9 (custom SMTP via Resend/Brevo, `{{ .Token }}` in the template, redirect URLs, public signups off). Record what was configured in `README.md`.
 - `/settings` minimal: platform admin sees users of the department with a role dropdown and an "Invite staff" form (creates the auth user via the admin API and sends a magic link).
 - **Done when:** a seeded user receives a code within 30 s, logs in, sees the dashboard; an unauthenticated visit to `/dashboard` redirects to `/login`; a `door_staff` user visiting `/events/new` gets 403; the admin changes a role and the change takes effect on next request.
+- **Verified 20 Sep 2026 in a browser against the local stack**, with three real accounts (`admin@`, `organiser@`, `door@demo.cut-events.test`):
+  - An unauthenticated `/dashboard` redirects to `/login`.
+  - `door@` requested a code, it arrived in Mailpit immediately, and the six digits signed them in to a dashboard that reads "Signed in as door@demo.cut-events.test · Door staff".
+  - `door@` visiting `/events/new` and `/settings` gets the 403 page — "You do not have access to this page" — rather than a redirect to `/login`, so a member of staff is never told to sign in again as themselves.
+  - `admin@` changed Thabo from door staff to auction operator through the Settings dropdown; `profiles.role` changed and `audit_log` gained a `profile.role_changed` row carrying the actor. Reverted afterwards.
+  - The invite form created `lerato.newstaff@example.com` as an organiser through the Auth admin API and, because no email provider is configured, displayed the magic link on screen instead of pretending to have sent it.
+  - `pnpm build` is clean; sign-out clears the session cookie and returns to `/login`.
+- **Still outstanding:** the same walkthrough on the dev project, which needs its secret key, and custom SMTP, which needs the Resend or Brevo key. Locally the mail goes to Mailpit, so the free-tier mailer limit in BUILD-SPEC §11b has not been exercised.
+- **Two defects found and fixed while testing:**
+  - The magic-link email carried only a link and no `{{ .Token }}`, so the six-digit code the form asks for was never delivered — exactly the trap BUILD-SPEC §4.9 names. `supabase/templates/magic-link.html` is now a branded CUT template containing both, wired into the local stack through `config.toml`; the dev and production dashboards must be set to match by hand.
+  - The sidebar footer was `lg:absolute lg:bottom-0`, which put Sign out in the bottom-left corner underneath the Next dev-tools indicator, where it could not be clicked. It is now a flex column with `mt-auto`.
+- **Decisions:** `lib/auth/roles.ts` holds the role names and labels with no server-only import, because `lib/auth/staff.ts` is `server-only` and a client component importing it is a build error. Nav links and action buttons a role cannot use are hidden rather than left to 403 — a control that always fails reads as a bug. `signInWithOtp` passes `shouldCreateUser: false` so a mistyped address cannot silently create an account with no department or role, and a failed request returns the same message whether or not the account exists, so the form cannot be used to enumerate registered addresses.
 
 ### T1.5 Token signing library ∥ ✅
 - `lib/auth/pass.ts` per BUILD-SPEC §6, constant-time compare.
