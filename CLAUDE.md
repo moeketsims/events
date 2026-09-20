@@ -24,10 +24,11 @@ If the spec and the plan disagree, the spec wins for technical matters and the p
 
 ## Working conventions
 - pnpm, Node 22, TypeScript strict, Next.js 15 App Router, Tailwind 4, shadcn/ui.
-- One task from `docs/03-TASKS.md` per branch and PR. Branch name `t<week>-<n>-<slug>`. Squash-merge.
-- Run `pnpm lint && pnpm typecheck && pnpm test` before opening a PR.
-- Commit messages: imperative mood, one line under 72 chars, body only when needed.
-- When you finish a task, tick it in `docs/03-TASKS.md` in the same PR.
+- Work on `main` in task-sized commits; push after every task so CI and Vercel run. Use a PR only for a change you want CI to gate first.
+- Run `pnpm lint && pnpm typecheck && pnpm test` before every push.
+- Commit messages: imperative mood, prefixed with the task id, one line under 72 chars, body only when needed. No attribution trailers.
+- When you finish a task, perform its "Done when" checks for real, then tick it in `docs/03-TASKS.md` in the same commit.
+- At the end of each week's tasks, stop and report to Moeketsi: what is demo-able, what is blocked, what you need.
 - Ask for prerequisites you lack (keys, domain, test phone numbers) in a single message at the start, then build everything that does not depend on them.
 
 ## Useful commands

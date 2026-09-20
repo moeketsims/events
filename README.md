@@ -13,6 +13,7 @@ Event management for Central University of Technology, Free State: invitations a
 | [docs/02-DESIGN-SYSTEM.md](docs/02-DESIGN-SYSTEM.md) | CUT brand facts and rules, tokens, typography, logo usage, per-surface layouts, copy, asset inventory |
 | [docs/03-TASKS.md](docs/03-TASKS.md) | Four weeks of tasks with acceptance criteria |
 | [docs/04-DEMO-SCRIPT.md](docs/04-DEMO-SCRIPT.md) | The 15-minute demo, kit, pre-demo checklist, recovery moves |
+| [docs/05-HANDOFF-PROMPT.md](docs/05-HANDOFF-PROMPT.md) | The prompt that starts the implementing agent |
 | [CLAUDE.md](CLAUDE.md) | Rules and conventions for the implementing agent |
 
 ## Assets

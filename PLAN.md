@@ -12,7 +12,8 @@
 2. [docs/02-DESIGN-SYSTEM.md](docs/02-DESIGN-SYSTEM.md) — CUT brand facts, tokens, typography, logo rules, per-surface layouts, copy, asset inventory.
 3. [docs/03-TASKS.md](docs/03-TASKS.md) — four weeks of tasks with acceptance criteria.
 4. [docs/04-DEMO-SCRIPT.md](docs/04-DEMO-SCRIPT.md) — the 15-minute demo, kit, checklist, recovery moves.
-5. [CLAUDE.md](CLAUDE.md) — rules and conventions for the implementing agent.
+5. [docs/05-HANDOFF-PROMPT.md](docs/05-HANDOFF-PROMPT.md) — the prompt that starts the implementing agent.
+6. [CLAUDE.md](CLAUDE.md) — rules and conventions for the implementing agent.
 
 ---
 

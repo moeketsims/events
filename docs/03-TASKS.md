@@ -2,7 +2,7 @@
 
 Four weeks. Each task is sized for a single sitting, states what "done" means, and names its dependencies. Work top to bottom within a week; tasks marked ∥ can run in parallel with the one above.
 
-Conventions for the implementer: one branch per task (`t1-3-migrations`), one PR, CI green, squash-merge to `main`. Commit messages in imperative mood. Never commit `.env.local`. Every schema change is a migration file. Every Server Action validates with zod. Every new route has at least a smoke test or a manual check noted in the PR.
+Conventions for the implementer: work directly on `main` in task-sized commits (one or a few commits per task, each leaving the app buildable), and push after every task so CI runs and Vercel deploys. Open a PR only when a task is risky enough that you want CI to gate it before merge. Commit messages in imperative mood, prefixed with the task id (`T2.4 RSVP page with consent and pass issuance`). Never commit `.env.local`. Every schema change is a migration file. Every Server Action validates with zod. Every task ends with its "Done when" checks actually performed and ticked in this file.
 
 Prerequisites the **user** must supply before Week 1 finishes (the agent should ask for them up front, in one message, then proceed with everything that does not depend on them):
 
@@ -35,14 +35,17 @@ Prerequisites the **user** must supply before Week 1 finishes (the agent should 
 
 ### T1.3 Supabase project link and migrations
 - `supabase init`, `supabase link --project-ref …`.
-- Write migrations `0001`–`0007` exactly as in BUILD-SPEC §4 (fix ordering: `citext` before `contacts`).
+- Write migrations `0001`–`0008` exactly as in BUILD-SPEC §4 (fix ordering: `citext` before `contacts`; `auctions_spotlight_fk` after `lots`).
+- Verify `realtime.send` works on the project with a one-line test in the SQL editor; if not, implement the polling fallback flag from BUILD-SPEC §4.6 in T3.3/T4.1 and note it here.
 - `pnpm db:push` script → `supabase db push`; `pnpm db:types` → `supabase gen types typescript --linked > lib/db/types.ts`.
 - **Done when:** `supabase db push` succeeds on a fresh dev project; `lot_state` view returns rows after inserting test data by hand; `select cron.schedule…` is present (or the every-minute fallback is documented in the migration comment).
 
 ### T1.4 Supabase clients and staff auth
 - `lib/supabase/{client,server,admin}.ts` per BUILD-SPEC §1; `middleware.ts` refreshing sessions.
 - `/login` with email OTP (request code, verify code), `requireStaff(roles)` helper, `/dashboard` placeholder that shows the signed-in profile and role.
-- **Done when:** a seeded user receives a code, logs in, sees the dashboard; an unauthenticated visit to `/dashboard` redirects to `/login`; a `door_staff` user visiting `/events/new` gets 403.
+- Supabase Auth configuration per BUILD-SPEC §4.9 (custom SMTP via Resend/Brevo, `{{ .Token }}` in the template, redirect URLs, public signups off). Record what was configured in `README.md`.
+- `/settings` minimal: platform admin sees users of the department with a role dropdown and an "Invite staff" form (creates the auth user via the admin API and sends a magic link).
+- **Done when:** a seeded user receives a code within 30 s, logs in, sees the dashboard; an unauthenticated visit to `/dashboard` redirects to `/login`; a `door_staff` user visiting `/events/new` gets 403; the admin changes a role and the change takes effect on next request.
 
 ### T1.5 Token signing library ∥
 - `lib/auth/pass.ts` per BUILD-SPEC §6, constant-time compare.
@@ -94,6 +97,7 @@ Prerequisites the **user** must supply before Week 1 finishes (the agent should 
 - `/rsvp/[token]`: verify token, load invitation + event; if `rsvp_deadline` passed show a closed message; form per BUILD-SPEC §7.3 including plus-one names when allowed and the consent checkbox (wording `v1`).
 - Submit: upsert `rsvps`, set `invitations.status`, create `attendees` (one per guest) with signed `p.` tokens, insert `consents`, send `pass` message by email and WhatsApp (if opted in), render success with pass link and "Add to calendar" `.ics`.
 - Declining shows a courteous message and no pass.
+- Capacity rule: accepted seats = sum of `rsvps.guest_count` over invitations with status `accepted`; if that plus the new request exceeds `events.capacity`, the invitation becomes `waitlisted`, no attendees are created, and the page says so. Declining or reducing guests frees seats; the organiser promotes waitlisted guests manually in the POC.
 - **Done when:** accepting creates attendees and sends the pass; revisiting the link shows the current answer and allows changing it until the deadline; capacity reached puts new acceptances on `waitlisted`.
 
 ### T2.5 Pass page

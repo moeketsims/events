@@ -121,8 +121,9 @@ events/
 
 | Tool | Version / choice | Notes |
 |---|---|---|
-| Node | 22 LTS | |
-| Package manager | pnpm 9 | `corepack enable` |
+| Node | 22 or 24 (the build machine has 24.18) | |
+| Package manager | pnpm 10+ (build machine has 11.4) | |
+| Script runner | `tsx` | For `seed.ts`, `bid-storm.ts`, `smoke-providers.ts` |
 | Next.js | 15.x, App Router, TypeScript strict | Server Actions for mutations from staff UI; Route Handlers for webhooks and scanner/bid endpoints. |
 | React | 19 | |
 | Tailwind CSS | 4.x | Theme tokens defined in `globals.css` via `@theme`. |
@@ -360,6 +361,8 @@ create table auctions (
     '[{"upTo":1000,"step":100},{"upTo":5000,"step":250},{"upTo":null,"step":500}]'::jsonb,
   terms_version text not null default 'v1',
   display_key text not null default encode(gen_random_bytes(16),'hex'),
+  display_mode text not null default 'grid' check (display_mode in ('grid','spotlight','total')),
+  spotlight_lot_id uuid,                -- fk to lots added after lots is created
   created_at timestamptz not null default now()
 );
 
@@ -381,6 +384,8 @@ create table lots (
   created_at timestamptz not null default now(),
   unique (auction_id, lot_number)
 );
+alter table auctions add constraint auctions_spotlight_fk
+  foreign key (spotlight_lot_id) references lots(id) on delete set null;
 
 -- append-only ledger; never update amount, only void
 create table bids (
@@ -715,6 +720,10 @@ supabase.channel(`auction:${auctionId}`)
 
 Broadcast of an organiser message is triggered by an `after insert` trigger on `broadcasts` when `sent_at` is set (or directly from the Server Action after inserting deliveries).
 
+`set_display_mode(p_auction_id, p_mode, p_lot_id)` updates the two columns and sends event `display_mode` `{mode, lot_id}` on `auction:{id}`.
+
+**Fallback if `realtime.send` is unavailable on the project:** keep the functions identical but replace each `perform realtime.send(...)` with a no-op, and have the projection, bidding pages and attendance dashboard poll `GET /api/auction/[id]/state` (returns `lot_state` rows + totals) and `GET /api/event/[id]/counts` every 2 seconds. The realtime path is preferred; the polling path must exist behind an env flag `NEXT_PUBLIC_REALTIME_MODE=broadcast|poll` so the demo cannot be blocked by a realtime setting. Also confirm in the Supabase dashboard (Realtime settings) that public channels are allowed for the project.
+
 ### 4.7 Cron (`0007`)
 
 ```sql
@@ -722,6 +731,29 @@ select cron.schedule('close-due-lots', '30 seconds', $$select close_due_lots()$$
 ```
 
 Lot `closes_at` is authoritative: `place_bid` rejects late bids on its own, so clients render countdowns from `closes_at` and the cron only finalises status and settlements. If the free tier's `pg_cron` refuses sub-minute schedules, use `* * * * *` (every minute); the user-visible behaviour is unchanged.
+
+### 4.8 Storage (`0008`)
+
+```sql
+insert into storage.buckets (id, name, public) values
+  ('lot-images','lot-images', true),
+  ('passes','passes', true),
+  ('event-banners','event-banners', true)
+on conflict (id) do nothing;
+
+create policy "public read lot-images" on storage.objects for select to public using (bucket_id = 'lot-images');
+create policy "public read passes" on storage.objects for select to public using (bucket_id = 'passes');
+create policy "public read event-banners" on storage.objects for select to public using (bucket_id = 'event-banners');
+-- no insert/update/delete policies: writes happen only through the service-role client
+```
+
+### 4.9 Supabase Auth configuration (dashboard, one-time, documented in README)
+
+- **Custom SMTP is required.** Supabase's built-in auth mailer is limited to a handful of emails per hour on the free tier, which will break OTP login during a demo. Configure Auth → SMTP with the Resend SMTP credentials (`smtp.resend.com`, port 465, user `resend`, password = API key) and the verified `EMAIL_FROM` address. If Brevo is used, use Brevo's SMTP relay instead.
+- Email template "Magic Link" must include `{{ .Token }}` so the 6-digit code is delivered; keep `{{ .ConfirmationURL }}` as well so the link also works.
+- Site URL = `NEXT_PUBLIC_APP_URL`; add `http://localhost:3000/**` and the Vercel preview pattern to Redirect URLs.
+- Disable "Enable email signups" for the public. Staff accounts are created only by the seed or by a platform admin via the Auth admin API in `/settings`.
+- The seed prints admin-generated magic links (`auth.admin.generateLink`) for each demo user as a fallback if SMTP is not yet configured.
 
 ---
 
@@ -809,6 +841,7 @@ Unit tests: round trip, tampered signature rejected, wrong kind rejected, stable
 |---|---|
 | `/rsvp/[token]` | Event details, attending yes/no, guest count (if allowed), custom questions, WhatsApp opt-in checkbox with consent wording. Submit → `rsvps` upsert, `invitations.status`, create `attendees` rows (one per guest) with pass tokens, send pass message. Shows the pass link on success. |
 | `/p/[token]` | Pass: QR (SVG), name, event, venue, time, "Add to calendar" (.ics link), bidder number once checked in, live broadcast feed (subscribes to `event:{id}` and refetches `/p/[token]/feed`), link to auction if enabled. Before check-in the auction link shows "Bidding opens once you have checked in at the door." |
+| `/p/[token]/feed` (GET, JSON) | The attendee's broadcasts: `broadcasts` joined to `message_deliveries` where `attendee_id` = this attendee and `channel = 'in_app'`, newest first, limit 50. Audience membership is therefore decided once, at send time, by which attendees received an `in_app` delivery row. |
 | `/p/[token]/auction` | Lot grid: image, title, current bid, next minimum, time left, "You are leading" / "Outbid" badges. Subscribes to `auction:{id}` and `attendee:{id}`. |
 | `/p/[token]/auction/[lotId]` | Lot detail, bid button with proposed amount, custom amount input, T&Cs acceptance on first bid (stored in `attendees`-linked `consents` with purpose `auction_terms`). |
 | `/p/[token]/bids` | My bids, leading/outbid, won lots with "Pay now" (Yoco checkout URL). |
@@ -862,7 +895,9 @@ export async function send(input: {
 
 Every call inserts a `message_deliveries` row first (status `queued`), calls the provider, then updates the row. Templates live in `lib/messaging/templates/{kind}.ts` and return `{ subject, html, text, whatsappText }`.
 
-**Email (Resend).** `POST https://api.resend.com/emails` with `from: EMAIL_FROM`, `to`, `subject`, `html`, `text`, `tags: [{name:'kind',value}]`. The QR image is attached inline as a CID attachment on the `pass` kind so it renders in Gmail. Resend's free tier requires a **verified sending domain** to email arbitrary recipients; without one it delivers only to the account owner. If no domain is available, set `EMAIL_PROVIDER=brevo` (300 emails/day, verified sender address is enough).
+**Email (Resend).** `POST https://api.resend.com/emails` with `from: EMAIL_FROM`, `to`, `subject`, `html`, `text`, `tags: [{name:'kind',value}]`. The `pass` email shows the QR as a hosted image (`<img src="https://…/storage/v1/object/public/passes/{attendeeId}.png">`) rather than an attachment, so it renders in every client and the same PNG serves WhatsApp. Resend's free tier requires a **verified sending domain** to email arbitrary recipients; without one it delivers only to the account owner. If no domain is available, set `EMAIL_PROVIDER=brevo` (300 emails/day, verified sender address is enough).
+
+Sending is batched: `sendInvitations` and `sendBroadcast` process recipients with concurrency 5 inside a Route Handler with `export const maxDuration = 60` (Vercel Hobby allows up to 60 s). Anything larger than 200 recipients is chunked into successive requests from the client with a progress bar; that limit is not reached in the POC.
 
 **WhatsApp (Meta Cloud API, direct).**
 `POST https://graph.facebook.com/v21.0/{WHATSAPP_PHONE_NUMBER_ID}/messages`, `Authorization: Bearer {token}`.
@@ -915,10 +950,45 @@ Idempotent; deletes and recreates its own department `demo`.
 - Event: **"CUT Fundraising Gala Dinner (Demo)"**, Friday 30 October 2026 18:00 SAST, venue "CUT Hotel School, Bloemfontein", capacity 200, plus-ones allowed, auction enabled, status `published`. The real gala exists on CUT's events calendar; the demo mirrors it.
 - Invitations: all 40 contacts; 28 accepted (with attendees and passes), 6 declined, 6 pending. 12 of the accepted are pre-checked-in with bidder numbers 1–12 so the auction board is not empty at demo start.
 - Auction: silent mode, soft close 120 s, default increment table, closes 30 October 2026 21:30.
-- Lots (six, images in `supabase/seed/lots/`): 1 "Weekend for two at a Clarens guesthouse" R3 000; 2 "Signed Cheetahs rugby jersey" R1 500; 3 "Original artwork by a CUT Design graduate" R5 000; 4 "Executive braai set, donated by a local partner" R2 000; 5 "One year of CUT Hotel School Sunday lunches" R6 000; 6 "Sponsor a first-year's textbooks" (pledge lot, buy-now R1 500, unlimited). Lots 1–5 open with 2–4 seeded bids each; lot 6 open.
+- Lots (six, images in `supabase/seed/lots/lot-{1..6}.jpg`): 1 "Weekend for two at a Clarens guesthouse" R3 000; 2 "Signed Cheetahs rugby jersey" R1 500; 3 "Original artwork by a CUT Design graduate" R5 000, reserve R6 000 (so the demo can show an unsold-under-reserve outcome); 4 "Executive braai set, donated by a local partner" R2 000; 5 "One year of CUT Hotel School Sunday lunches" R6 000; 6 "Sponsor a first-year's textbooks for a year" R1 500. All six are ordinary auction lots in the POC (pledge lots with unlimited takers are Stage B). Lots 1–5 open with 2–4 seeded bids each from the 12 checked-in attendees; lot 6 open with no bids.
 - Two demo pass URLs and the display URL are printed at the end of the seed run.
 
 ---
+
+## 11a. `package.json` scripts
+
+```json
+{
+  "dev": "next dev",
+  "build": "next build",
+  "start": "next start",
+  "lint": "next lint",
+  "typecheck": "tsc --noEmit",
+  "test": "vitest run",
+  "test:watch": "vitest",
+  "e2e": "playwright test",
+  "db:push": "supabase db push",
+  "db:types": "supabase gen types typescript --linked > lib/db/types.ts",
+  "seed": "tsx supabase/seed/seed.ts",
+  "bid-storm": "tsx scripts/bid-storm.ts",
+  "smoke-providers": "tsx scripts/smoke-providers.ts",
+  "assets:fetch": "bash scripts/fetch-brand-assets.sh",
+  "assets:derive": "python scripts/generate-derived-assets.py"
+}
+```
+
+## 11b. Known platform gotchas (read before Week 1)
+
+- **Supabase Auth mailer rate limit** on the free tier is a few emails per hour. Configure custom SMTP (§4.9) before relying on OTP login.
+- **`html5-qrcode` needs HTTPS** and a user gesture to open the camera on iOS Safari. Localhost is exempt; Vercel is HTTPS. Import it in a client component with `dynamic(() => import(...), { ssr: false })`.
+- **Server Action body size** defaults to 1 MB. Set `experimental.serverActions.bodySizeLimit = '10mb'` in `next.config.ts` for CSV and image uploads; resize images client-side to ≤ 1600 px before upload.
+- **Vercel function region:** set `regions: ['cpt1']` (Cape Town) in `vercel.json` if the Supabase project is in an African or European region; otherwise match the Supabase region. Cross-continent hops add 150–300 ms to every bid.
+- **Preview deployments** get their own URL; QR codes embed `NEXT_PUBLIC_APP_URL`, so always generate demo passes from the production deployment.
+- **Meta temporary access tokens expire after 24 hours.** Refresh in the Meta dashboard on the morning of every demo, or create a System User token (permanent) once the app is past development mode.
+- **WhatsApp test number** delivers free-form text only inside a 24-hour window opened by the recipient messaging the number first. Demo phones must send "Hi" beforehand.
+- **`realtime.send` and public channels** must be enabled on the project; the polling fallback in §4.6 exists for this reason.
+- **`pg_cron` sub-minute schedules** need pg_cron ≥ 1.5; fall back to every minute.
+- **Time zones:** Supabase stores `timestamptz` in UTC; render with `Intl.DateTimeFormat('en-ZA', { timeZone: 'Africa/Johannesburg' })`. Never use `toLocaleString()` without a zone.
 
 ## 12. Quality gates
 
