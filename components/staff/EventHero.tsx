@@ -17,6 +17,7 @@ export function EventHero({
   counts,
   raised,
   canOrganise,
+  showOverviewLink = true,
 }: {
   event: {
     id: string;
@@ -29,6 +30,8 @@ export function EventHero({
   counts: { invited: number; accepted: number; attendees: number; checkedIn: number };
   raised: number | null;
   canOrganise: boolean;
+  /** Off on the event overview itself, where the link would point at the page. */
+  showOverviewLink?: boolean;
 }) {
   const isLive = event.status === 'live';
   const toCome = Math.max(0, counts.attendees - counts.checkedIn);
@@ -132,13 +135,15 @@ export function EventHero({
             />
           </div>
 
-          <Link
-            href={`/events/${event.id}`}
-            className="group inline-flex items-center gap-2 self-start text-sm font-semibold text-white/85 transition-colors hover:text-white"
-          >
-            Event overview
-            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
-          </Link>
+          {showOverviewLink ? (
+            <Link
+              href={`/events/${event.id}`}
+              className="group inline-flex items-center gap-2 self-start text-sm font-semibold text-white/85 transition-colors hover:text-white"
+            >
+              Event overview
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
+            </Link>
+          ) : null}
         </div>
       </div>
     </section>

@@ -32,11 +32,36 @@ export function NewEventForm() {
         <Input id="title" name="title" required placeholder="CUT Fundraising Gala Dinner" />
       </div>
 
+      <div className="space-y-1.5">
+        <Label htmlFor="description">Description</Label>
+        <textarea
+          id="description"
+          name="description"
+          rows={3}
+          maxLength={4000}
+          placeholder="What guests should know before they arrive."
+          className="border-hairline-strong focus:border-cut-700 focus:ring-cut-700/20 w-full rounded-md border bg-white p-3 text-sm focus:ring-4 focus:outline-none"
+        />
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label htmlFor="startsAt">Starts</Label>
           <Input id="startsAt" name="startsAt" type="datetime-local" required />
           <p className="text-ink-500 text-sm">South African Standard Time.</p>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="endsAt">Ends</Label>
+          <Input id="endsAt" name="endsAt" type="datetime-local" />
+          <p className="text-ink-500 text-sm">Optional.</p>
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="rsvpDeadline">RSVP deadline</Label>
+          <Input id="rsvpDeadline" name="rsvpDeadline" type="datetime-local" />
+          <p className="text-ink-500 text-sm">After this, the RSVP link stops accepting.</p>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="capacity">Capacity</Label>
@@ -47,9 +72,15 @@ export function NewEventForm() {
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="venueName">Venue</Label>
-        <Input id="venueName" name="venueName" placeholder="CUT Hotel School, Bloemfontein" />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label htmlFor="venueName">Venue</Label>
+          <Input id="venueName" name="venueName" placeholder="CUT Hotel School, Bloemfontein" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="venueAddress">Address</Label>
+          <Input id="venueAddress" name="venueAddress" placeholder="1 Park Road, Bloemfontein" />
+        </div>
       </div>
 
       <fieldset className="space-y-3">
