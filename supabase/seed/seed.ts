@@ -567,7 +567,8 @@ async function seedBids(
 
 async function main() {
   const started = Date.now();
-  console.log(`\nSeeding ${SUPABASE_URL}\n`);
+  const isLocalStack = /127\.0\.0\.1|localhost/.test(SUPABASE_URL!);
+  console.log(`\nSeeding ${SUPABASE_URL}${isLocalStack ? ' (local stack)' : ''}\n`);
 
   process.stdout.write('  clearing the previous demo … ');
   await teardown();
@@ -633,11 +634,21 @@ async function main() {
   );
   console.log(rule);
 
-  console.log('\n  STAFF — magic links, valid once, in case SMTP is not configured yet\n');
+  console.log('\n  STAFF — each link signs in once and is then spent\n');
   for (const person of staff) {
     console.log(`  ${person.email}`);
     console.log(`    ${person.magicLink ?? '(no link generated)'}\n`);
   }
+
+  // A spent link redirects to /login?error=link_expired, which now says so.
+  // Print the non-expiring way in as well, so a used link is a detour rather
+  // than a dead end.
+  console.log(`  Or sign in at ${APP_URL}/login with any address above.`);
+  console.log(
+    isLocalStack
+      ? '  The six-digit code is caught by Mailpit at http://127.0.0.1:54524\n'
+      : '  The six-digit code is emailed; custom SMTP must be configured.\n',
+  );
 
   console.log('  ATTENDEE PASSES — open these on the demo phones\n');
   for (const attendee of arrivals.slice(0, 2)) {
