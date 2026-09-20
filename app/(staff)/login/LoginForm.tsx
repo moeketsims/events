@@ -14,7 +14,7 @@ function SubmitButton({ children }: { children: React.ReactNode }) {
     <Button
       type="submit"
       variant="gold"
-      className="h-13 w-full text-[0.9375rem] font-semibold"
+      className="h-12 w-full text-[0.9375rem] font-semibold"
       disabled={pending}
     >
       {pending ? 'One moment…' : children}
@@ -41,7 +41,7 @@ function Message({ state }: { state: LoginState }) {
   return null;
 }
 
-const INPUT = 'input-dark h-13 w-full rounded-lg px-4 text-[0.9375rem]';
+const INPUT = 'input-dark h-12 w-full rounded-lg px-4 text-[0.9375rem]';
 
 export function LoginForm({ next }: { next?: string }) {
   const [requestState, requestAction] = useActionState<LoginState, FormData>(requestOtp, {
@@ -58,7 +58,7 @@ export function LoginForm({ next }: { next?: string }) {
 
   if (!onCodeStep) {
     return (
-      <form action={requestAction} className="space-y-5">
+      <form action={requestAction} className="space-y-4">
         <Message state={requestState} />
 
         <div className="space-y-2">
@@ -89,7 +89,7 @@ export function LoginForm({ next }: { next?: string }) {
   }
 
   return (
-    <form action={verifyAction} className="space-y-5">
+    <form action={verifyAction} className="space-y-4">
       <Message state={verifyState.error || verifyState.notice ? verifyState : requestState} />
 
       <input type="hidden" name="email" value={email ?? ''} />

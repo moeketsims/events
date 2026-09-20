@@ -8,14 +8,23 @@ import { cn } from '@/lib/utils';
 /**
  * "Tonight" on the public pages: the featured event, the money, the room, and a
  * ticker of the last anonymised bids. If there is no event, it renders nothing
- * and the page falls back to the pillars.
+ * and the page falls back to the pillars. `compact` is the single-screen
+ * variant used on the sign-in page.
  */
-export function LiveStrip({ data, className }: { data: Showcase; className?: string }) {
+export function LiveStrip({
+  data,
+  compact = false,
+  className,
+}: {
+  data: Showcase;
+  compact?: boolean;
+  className?: string;
+}) {
   if (!data.event) return null;
   const live = data.event.status === 'live';
 
   return (
-    <div className={cn('glass-panel rounded-2xl p-6 sm:p-7', className)}>
+    <div className={cn('glass-panel rounded-2xl', compact ? 'p-5' : 'p-6 sm:p-7', className)}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="inline-flex items-center gap-2 text-[0.6875rem] font-bold tracking-[0.16em] text-white/70 uppercase">
           {live ? <span className="live-dot" /> : null}
@@ -27,27 +36,43 @@ export function LiveStrip({ data, className }: { data: Showcase; className?: str
         </p>
       </div>
 
-      <p className="font-display mt-3 text-[1.75rem] leading-none font-semibold text-white">
+      <p
+        className={cn(
+          'font-display leading-none font-semibold text-white',
+          compact ? 'mt-2 text-[1.375rem]' : 'mt-3 text-[1.75rem]',
+        )}
+      >
         {data.event.title}
       </p>
 
-      <div className="mt-6 grid grid-cols-3 gap-4 sm:gap-8">
+      <div className={cn('grid grid-cols-3 gap-4 sm:gap-8', compact ? 'mt-4' : 'mt-6')}>
         <Figure
+          compact={compact}
           label="Raised so far"
           value={
             <CountUp value={data.totalRaised} format="zar" className="text-gold-metallic" />
           }
         />
         <Figure
+          compact={compact}
           label="Guests arrived"
           value={<CountUp value={data.arrived} />}
           hint={data.expected ? `of ${data.expected}` : undefined}
         />
-        <Figure label="Lots open" value={<CountUp value={data.lotsOpen} duration={1200} />} />
+        <Figure
+          compact={compact}
+          label="Lots open"
+          value={<CountUp value={data.lotsOpen} duration={1200} />}
+        />
       </div>
 
       {data.recentBids.length > 0 ? (
-        <div className="mt-6 border-t border-white/10 pt-4">
+        <div
+          className={cn(
+            'border-t border-white/10',
+            compact ? 'mt-4 pt-3 [@media(max-height:760px)]:hidden' : 'mt-6 pt-4',
+          )}
+        >
           <Marquee speed={38}>
             {data.recentBids.map((b, i) => (
               <span key={i} className="inline-flex items-center gap-3 text-sm whitespace-nowrap text-white/75">
@@ -69,15 +94,24 @@ function Figure({
   label,
   value,
   hint,
+  compact,
 }: {
   label: string;
   value: React.ReactNode;
   hint?: string;
+  compact: boolean;
 }) {
   return (
     <div className="min-w-0">
       <p className="text-[0.6875rem] font-bold tracking-[0.14em] text-white/50 uppercase">{label}</p>
-      <p className="numeral mt-2 truncate text-[2rem] text-white sm:text-[2.5rem]">{value}</p>
+      <p
+        className={cn(
+          'numeral truncate text-white',
+          compact ? 'mt-1.5 text-[1.75rem] sm:text-[2rem]' : 'mt-2 text-[2rem] sm:text-[2.5rem]',
+        )}
+      >
+        {value}
+      </p>
       {hint ? <p className="mt-1 text-xs text-white/45">{hint}</p> : null}
     </div>
   );

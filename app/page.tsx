@@ -68,7 +68,7 @@ export default async function HomePage() {
         </header>
 
         {/* Hero */}
-        <section className="grid min-h-[78vh] items-center gap-12 py-16 lg:grid-cols-[1.3fr_1fr] lg:gap-16">
+        <section className="grid min-h-[calc(100dvh-7.5rem)] items-center gap-12 py-10 lg:grid-cols-[1.3fr_1fr] lg:gap-16">
           <div>
             <p
               className="eyebrow eyebrow-on-dark reveal tracking-[0.18em]"
@@ -77,19 +77,19 @@ export default async function HomePage() {
               Central University of Technology · Institutional Advancement
             </p>
             <h1
-              className="font-display reveal mt-6 text-[clamp(3.5rem,6.2vw,6.75rem)] leading-[0.92] font-bold tracking-[-0.01em] text-balance"
+              className="font-display reveal mt-6 text-[clamp(3rem,min(5.8vw,11vh),6.5rem)] leading-[0.92] font-bold tracking-[-0.01em] text-balance"
               style={{ '--reveal-delay': '0.2s' } as React.CSSProperties}
             >
-              The gift comes first.
+              Where CUT gathers.
               <br />
-              <span className="text-gold-metallic">The gala follows.</span>
+              <span className="text-gold-metallic">Where CUT gives.</span>
             </h1>
             <p
               className="reveal mt-8 max-w-xl text-[1.125rem] leading-relaxed text-white/70 sm:text-[1.25rem]"
               style={{ '--reveal-delay': '0.32s' } as React.CSSProperties}
             >
-              From the first invitation to the last winning bid: one place for every CUT event, and
-              for the generosity that carries the university forward.
+              From the first invitation to the last gift: one place for every CUT event, and for the
+              generosity that carries the university forward.
             </p>
             <div
               className="reveal mt-10 flex flex-wrap gap-3"
