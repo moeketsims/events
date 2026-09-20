@@ -16,7 +16,7 @@
 export const FEATURES = {
   broadcasts: true,
   auction: true,
-  bidding: false,
+  bidding: true,
   console: false,
   results: false,
 } as const;
