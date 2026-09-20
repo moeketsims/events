@@ -16,7 +16,7 @@ export default async function NewEventPage() {
         breadcrumb="Events"
         description="The essentials now; venue, banner, questions and the auction come after it exists."
       />
-      <div className="border-ink-300 max-w-2xl rounded-lg border bg-white p-6">
+      <div className="card max-w-2xl p-6">
         <NewEventForm />
       </div>
     </StaffShell>

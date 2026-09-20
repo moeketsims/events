@@ -75,6 +75,40 @@ shadcn mapping (light): `--background: paper`, `--foreground: ink-900`, `--prima
 
 Projection (dark): `--background: cut-950`, `--foreground: paper`, `--primary: gold-500`, `--card: cut-900`, `--border: cut-700`, `--muted-foreground: #A8C0DA`.
 
+### 2.4 Visual language v2 (applies to every surface built from 20 September 2026)
+
+The first build was a default component kit with brand colours dropped in. This section is what replaced it, and it is binding. References studied: Linear (calm layered surfaces, one accent, motion that settles), Luma (a single hero card carries the event), and editorial navy-and-gold university identities (restraint, generous type). The reading of the CUT brand is: **navy is the stage, white is the page, gold is the spotlight.**
+
+**Surfaces and depth**
+- Content sits on `canvas` `#F4F6F9`, never on pure white. Cards are white with a 1 px `hairline` border `rgba(0,50,97,.10)`, 12 px radius, and a navy-tinted soft shadow (`--shadow-card`). Hover lifts 2 px and deepens the shadow (`.card-hover`). Grey shadows are forbidden; every shadow is tinted `#001738`.
+- Navy surfaces (sidebar, hero, attendee header, projection) use gradients, not flat fills: `bg-shell` for the sidebar, `bg-hero` for hero blocks. Both carry the CUT watermark symbol at 7 % (`.watermark`), positioned so only the symbol, never the logotype, is in frame.
+- On navy, secondary information lives in glass tiles: `bg-white/8`, `border-white/10`, `backdrop-blur`.
+- Exactly one dramatic element per page. On the dashboard it is the event hero; on the login page the brand panel; on the pass page the header. Everything else is quiet.
+
+**Type**
+- Page titles 40–48 px Barlow Condensed 700, tight tracking. Section titles 28 px. Display numerals use `.numeral` (condensed, tabular, line-height 1).
+- Every opener starts with an `.eyebrow`: 11 px caps, 0.12 em tracking, `cut-700`, with a 16 px gold dash before it. On navy, `.eyebrow-on-dark`.
+- Body 16–17 px Source Sans 3, `ink-500` for secondary text, never lighter than `ink-500` on white.
+
+**Colour discipline**
+- Gold appears only as: eyebrow dash, active nav indicator, live dot, one primary CTA on navy (`variant="gold"`), the leading-bid numeral, progress fill, and the motto. Never as a background for text on white. This keeps the 30 % rule with room to spare.
+- Status colours are tints, not fills: `published` is `sky-500` text on `sky-500/12`; `closed` is `green-600` on `green-600/12`. `live` is the exception: solid gold with a pulsing dot.
+- Logo maroon and logo gold never leave the logo.
+
+**Shell**
+- Sidebar 268 px, `bg-shell`, logo on a white plate with a dark drop shadow (`--shadow-plate`), "Workspace" micro-label, nav rows 40 px with an 18 px icon; the active row is `white/10` with a 3 px gold bar on the left and a gold icon. Footer: initials avatar (gold disc, navy letters, gold ring), name, role · department, icon-only sign-out.
+- Content max 1200 px, 48 px side padding on desktop, fades up on load (`animate-fade-up`, 550 ms, soft ease). Page footer line: motto in condensed navy, then the university name in `ink-500`.
+
+**Components introduced** (`components/staff/StaffShell.tsx`, `EventHero.tsx`, `components/brand/BrandPanel.tsx`)
+- `PageHeader` (eyebrow, display title, description, action), `SectionHeading`, `StatTile` (icon chip with `tone`, display numeral), `StatusPill`, `DateBlock` (calendar leaf: day numeral over month), `ActionCard`, `EventHero` (navy hero with funnel glass tiles and arrivals bar), `BrandPanel` (login and landing left panel).
+- Button variants added: `gold` (primary on navy) and `onDark` (glass secondary on navy).
+- Tables inside a card use `.table-card`: caps header on `cut-50`, hairline rows, row hover tint.
+
+**Motion**
+- Load: fade-up 10 px. Hover: 2 px lift over 300 ms with `--ease-out-soft`. Live: `.live-dot` ring pulse. Bids on the projection: 1.5 s gold border flash. Nothing else moves. `prefers-reduced-motion` disables all of it.
+
+**What the implementing agent must carry forward** into the pages not yet built (event overview, guests, invitations, attendance, broadcasts, auction editor, console, results, scanner, RSVP, pass, bidding, projection): the same tokens and components, one dramatic element per page, eyebrow-led openers, hairline cards on canvas, gold only where listed. The projection keeps its own rules in §5.4 but inherits the gradient, watermark and glass-tile treatment from this section.
+
 ### 2.3 Semantic use
 
 | Meaning | Token | Example |

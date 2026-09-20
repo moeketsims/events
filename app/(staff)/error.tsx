@@ -25,7 +25,7 @@ export default function StaffError({
 
   return (
     <div className="bg-cut-50 flex min-h-dvh items-center justify-center px-4">
-      <div className="border-ink-300 w-full max-w-md rounded-lg border bg-white p-8 text-center">
+      <div className="card w-full max-w-md p-8 text-center">
         <p className="label-caps text-ink-500">
           {forbidden ? 'Error 403' : 'Something went wrong'}
         </p>

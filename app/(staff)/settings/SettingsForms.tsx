@@ -60,7 +60,7 @@ export function RoleForm({
         name="role"
         defaultValue={currentRole}
         disabled={disabled}
-        className="border-ink-300 disabled:bg-ink-100 disabled:text-ink-500 h-11 rounded-md border bg-white px-3 text-sm"
+        className="border-hairline-strong disabled:bg-ink-100 disabled:text-ink-500 h-11 rounded-md border bg-white px-3 text-sm"
       >
         {ROLES.map((role) => (
           <option key={role} value={role}>
@@ -102,7 +102,7 @@ export function InviteForm() {
             id="invite-role"
             name="role"
             defaultValue="door_staff"
-            className="border-ink-300 h-9 w-full rounded-md border bg-white px-3 text-sm"
+            className="border-hairline-strong h-9 w-full rounded-md border bg-white px-3 text-sm"
           >
             {ROLES.map((role) => (
               <option key={role} value={role}>

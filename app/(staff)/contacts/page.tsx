@@ -23,16 +23,16 @@ export default async function ContactsPage() {
       />
 
       {(contacts ?? []).length === 0 ? (
-        <div className="border-ink-300 rounded-lg border border-dashed bg-white p-10 text-center">
+        <div className="border-hairline-strong rounded-xl border border-dashed bg-white/60 p-10 text-center">
           <p className="text-ink-900 font-semibold">No contacts yet</p>
           <p className="text-ink-500 mt-1 text-sm">
             Run <code className="font-mono">pnpm seed</code> to load the 40 fictitious demo guests.
           </p>
         </div>
       ) : (
-        <div className="border-ink-300 overflow-hidden rounded-lg border bg-white">
+        <div className="card table-card overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="border-ink-300 bg-ink-100 border-b">
+            <thead className="border-hairline bg-cut-50 border-b">
               <tr>
                 <th className="label-caps text-ink-500 px-4 py-3 text-left">Name</th>
                 <th className="label-caps text-ink-500 px-4 py-3 text-left">Email</th>
@@ -42,7 +42,7 @@ export default async function ContactsPage() {
             </thead>
             <tbody>
               {(contacts ?? []).map((c) => (
-                <tr key={c.id} className="border-ink-300 border-b last:border-0">
+                <tr key={c.id} className="border-hairline border-b last:border-0">
                   <td className="px-4 py-3">
                     {c.first_name} {c.last_name}
                   </td>

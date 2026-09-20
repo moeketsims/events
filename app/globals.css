@@ -37,7 +37,63 @@
   --font-display: var(--font-barlow-condensed), 'Arial Narrow', system-ui, sans-serif;
   --font-body: var(--font-source-sans), system-ui, -apple-system, sans-serif;
 
-  --radius-card: 0.5rem;
+  --radius-card: 0.75rem;
+
+  /* ---- Visual language v2 (DESIGN-SYSTEM §2.4) ---- */
+  /* surfaces */
+  --color-canvas: #f4f6f9; /* content background behind cards */
+  --color-hairline: rgba(0, 50, 97, 0.1); /* card and divider borders */
+  --color-hairline-strong: rgba(0, 50, 97, 0.2);
+  --color-cut-glass: rgba(255, 255, 255, 0.08); /* tiles on navy */
+  --color-cut-glass-strong: rgba(255, 255, 255, 0.14);
+
+  /* elevation: navy-tinted, soft, never grey */
+  --shadow-card: 0 1px 2px rgba(0, 23, 56, 0.04), 0 10px 30px -18px rgba(0, 23, 56, 0.22);
+  --shadow-card-hover: 0 2px 4px rgba(0, 23, 56, 0.05), 0 18px 40px -18px rgba(0, 23, 56, 0.32);
+  --shadow-hero: 0 24px 60px -24px rgba(0, 23, 56, 0.55);
+  --shadow-plate: 0 8px 24px -12px rgba(0, 0, 0, 0.55);
+
+  /* gradients */
+  --background-image-shell: linear-gradient(180deg, #003261 0%, #002250 55%, #001738 100%);
+  --background-image-hero:
+    radial-gradient(120% 140% at 100% 0%, rgba(0, 130, 209, 0.3) 0%, rgba(0, 130, 209, 0) 55%),
+    radial-gradient(80% 90% at 0% 100%, rgba(251, 185, 39, 0.16) 0%, rgba(251, 185, 39, 0) 60%),
+    linear-gradient(135deg, #003261 0%, #00224f 60%, #001738 100%);
+  --background-image-gold-rule: linear-gradient(90deg, #fbb927, rgba(251, 185, 39, 0));
+
+  /* motion */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-fade-up: fade-up 0.55s var(--ease-out-soft) both;
+  --animate-fade-in: fade-in 0.4s ease-out both;
+  --animate-pulse-soft: pulse-soft 2s ease-in-out infinite;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes pulse-soft {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgba(251, 185, 39, 0.55);
+    }
+    50% {
+      box-shadow: 0 0 0 6px rgba(251, 185, 39, 0);
+    }
+  }
 }
 
 /* ------------------------------------------------------------------ *
@@ -170,6 +226,124 @@
   /* Body copy never exceeds 68ch and is never justified. */
   .measure {
     max-width: 68ch;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Composite surfaces — DESIGN-SYSTEM §2.4. Plain CSS on purpose: these
+ * combine tokens that @apply cannot reach from @layer base.
+ * ------------------------------------------------------------------ */
+@layer components {
+  /* The standard card. White, hairline, soft navy shadow, 12 px radius. */
+  .card {
+    background: var(--color-paper);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+  }
+  .card-hover {
+    transition:
+      transform 0.3s var(--ease-out-soft),
+      box-shadow 0.3s var(--ease-out-soft),
+      border-color 0.3s var(--ease-out-soft);
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card-hover);
+    border-color: var(--color-hairline-strong);
+  }
+
+  /* Eyebrow: small caps label with a short gold dash. Section and page openers. */
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--color-cut-700);
+  }
+  .eyebrow::before {
+    content: '';
+    width: 1rem;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--color-gold-500);
+  }
+  .eyebrow-on-dark {
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  /* Faint CUT watermark, for navy surfaces only. The symbol is the approved
+     watermark file; opacity keeps it ambient rather than a second logo. */
+  .watermark::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: url('/brand/watermark.png');
+    background-repeat: no-repeat;
+    /* Sized and offset so only the symbol is in frame; the logotype half of the
+       file falls below the edge. */
+    background-size: 640px auto;
+    background-position: right -160px bottom -470px;
+    opacity: 0.07;
+    filter: brightness(3);
+  }
+
+  /* A live indicator: gold dot with a soft expanding ring. */
+  .live-dot {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: var(--color-gold-500);
+    animation: var(--animate-pulse-soft);
+  }
+
+  /* Display numerals: condensed, tabular, tight. */
+  .numeral {
+    font-family: var(--font-display);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1;
+  }
+
+  /* Gold rule under an opener, fading to the right. */
+  .gold-rule {
+    height: 3px;
+    width: 4.5rem;
+    border-radius: 2px;
+    background-image: var(--background-image-gold-rule);
+  }
+
+  /* Data table inside a card. */
+  .table-card table {
+    width: 100%;
+    font-size: 0.875rem;
+  }
+  .table-card thead th {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    color: var(--color-ink-500);
+    background: var(--color-cut-50);
+    border-bottom: 1px solid var(--color-hairline);
+    padding: 0.75rem 1.25rem;
+    text-align: left;
+  }
+  .table-card tbody td {
+    padding: 0.875rem 1.25rem;
+    border-bottom: 1px solid var(--color-hairline);
+  }
+  .table-card tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  .table-card tbody tr:hover td {
+    background: var(--color-cut-50);
   }
 }
 

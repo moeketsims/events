@@ -1,146 +1,260 @@
 import Link from 'next/link';
-import { CalendarDays, QrCode, Users } from 'lucide-react';
-import { PageHeader, StaffShell, StatTile } from '@/components/staff/StaffShell';
+import { ArrowRight, CalendarDays, Plus, QrCode, Radio, Users } from 'lucide-react';
+import {
+  ActionCard,
+  DateBlock,
+  PageHeader,
+  SectionHeading,
+  StaffShell,
+  StatTile,
+  StatusPill,
+} from '@/components/staff/StaffShell';
+import { EventHero } from '@/components/staff/EventHero';
 import { Button } from '@/components/ui/button';
-import { ROLE_LABELS, hasRole, requireStaff } from '@/lib/auth/staff';
+import { hasRole, requireStaff } from '@/lib/auth/staff';
 import { createClient } from '@/lib/supabase/server';
 import { formatEventDate } from '@/lib/dates';
+import { TIME_ZONE } from '@/lib/env';
 
 export const metadata = { title: 'Dashboard' };
+
+const TODAY = new Intl.DateTimeFormat('en-ZA', {
+  timeZone: TIME_ZONE,
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+});
 
 export default async function DashboardPage() {
   const profile = await requireStaff();
   const supabase = await createClient();
 
-  // RLS confines all three of these to the signed-in user's department.
+  // RLS confines all of these to the signed-in user's department.
   const [{ data: events }, { count: contactCount }] = await Promise.all([
     supabase
       .from('events')
       .select('id, title, slug, starts_at, venue_name, status, auction_enabled')
+      .in('status', ['published', 'live', 'draft'])
       .order('starts_at', { ascending: true })
       .limit(8),
     supabase.from('contacts').select('id', { count: 'exact', head: true }),
   ]);
 
   const upcoming = events ?? [];
-  const live = upcoming.filter((e) => e.status === 'live').length;
+  const liveCount = upcoming.filter((e) => e.status === 'live').length;
+  const featured = upcoming.find((e) => e.status === 'live') ?? upcoming.find((e) => e.status === 'published') ?? upcoming[0];
+  const rest = upcoming.filter((e) => e.id !== featured?.id);
+
+  const counts = featured
+    ? await featuredCounts(supabase, featured.id)
+    : { invited: 0, accepted: 0, attendees: 0, checkedIn: 0 };
+
   // Door staff cannot create events, so do not offer them the button: a control
   // that always ends in a 403 is worse than no control.
-  const canCreate = hasRole(profile, ['organiser']);
+  const canOrganise = hasRole(profile, ['organiser']);
+  const firstName = profile.fullName?.split(' ')[0] ?? 'there';
 
   return (
     <StaffShell profile={profile}>
       <PageHeader
-        title={`Welcome, ${profile.fullName?.split(' ')[0] ?? 'there'}`}
-        breadcrumb={profile.departmentName ?? 'CUT Events'}
-        description={`Signed in as ${profile.email} · ${ROLE_LABELS[profile.role]}`}
+        breadcrumb={TODAY.format(new Date())}
+        title={`Good ${daypart()}, ${firstName}`}
+        description={
+          liveCount > 0
+            ? 'Doors are open. The scanner and the broadcast desk are one tap away.'
+            : 'Here is where your department stands across invitations, arrivals and giving.'
+        }
         action={
-          canCreate ? (
-            <Button asChild>
-              <Link href="/events/new">Create an event</Link>
+          canOrganise ? (
+            <Button asChild size="lg" className="h-11 px-5">
+              <Link href="/events/new">
+                <Plus className="size-4" aria-hidden /> Create an event
+              </Link>
             </Button>
           ) : null
         }
       />
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-3">
-        <StatTile label="Events" value={upcoming.length} hint="Visible to your department" />
-        <StatTile label="Live now" value={live} hint="Doors open" />
-        <StatTile label="Contacts" value={contactCount ?? 0} />
+      {featured ? (
+        <EventHero event={featured} counts={counts} canOrganise={canOrganise} />
+      ) : (
+        <EmptyHero canCreate={canOrganise} />
+      )}
+
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatTile
+          label="Events"
+          value={upcoming.length}
+          hint="Open in your department"
+          icon={<CalendarDays className="size-4" aria-hidden />}
+        />
+        <StatTile
+          label="Live now"
+          value={liveCount}
+          hint={liveCount > 0 ? 'Doors open' : 'Nothing live'}
+          icon={<Radio className="size-4" aria-hidden />}
+          tone="gold"
+        />
+        <StatTile
+          label="Accepted"
+          value={counts.accepted}
+          hint={featured ? `of ${counts.invited} invited` : undefined}
+          icon={<Users className="size-4" aria-hidden />}
+          tone="green"
+        />
+        <StatTile
+          label="Contacts"
+          value={contactCount ?? 0}
+          hint="In your department"
+          icon={<Users className="size-4" aria-hidden />}
+          tone="sky"
+        />
       </div>
 
-      <section>
-        <h2 className="text-cut-900 mb-4">Upcoming events</h2>
+      <div className="mt-12 grid gap-10 lg:grid-cols-[1.4fr_1fr]">
+        <section>
+          <SectionHeading
+            eyebrow="Calendar"
+            title="Upcoming events"
+            action={
+              <Link
+                href="/events"
+                className="text-cut-700 hover:text-cut-900 inline-flex items-center gap-1 text-sm font-semibold"
+              >
+                All events <ArrowRight className="size-4" aria-hidden />
+              </Link>
+            }
+          />
 
-        {upcoming.length === 0 ? (
-          <div className="border-ink-300 rounded-lg border border-dashed bg-white p-10 text-center">
-            <CalendarDays className="text-ink-300 mx-auto size-8" aria-hidden />
-            <p className="text-ink-900 mt-3 font-semibold">No events yet</p>
-            <p className="measure text-ink-500 mx-auto mt-1 text-sm">
-              {canCreate
-                ? 'Create one, or run pnpm seed to load the demo gala.'
-                : 'Nothing has been published to your department yet.'}
-            </p>
-            {canCreate ? (
-              <Button asChild className="mt-4">
-                <Link href="/events/new">Create an event</Link>
-              </Button>
+          {rest.length === 0 ? (
+            <div className="border-hairline-strong rounded-xl border border-dashed bg-white/60 p-8 text-center">
+              <p className="text-ink-900 font-semibold">
+                {featured ? 'Nothing else scheduled' : 'No events yet'}
+              </p>
+              <p className="text-ink-500 mx-auto mt-1 max-w-sm text-sm">
+                {canOrganise
+                  ? 'Create the next one when it is ready. Drafts appear here too.'
+                  : 'Nothing further has been published to your department.'}
+              </p>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {rest.map((event) => (
+                <li key={event.id}>
+                  <Link
+                    href={`/events/${event.id}`}
+                    className="card card-hover flex items-center gap-5 p-4"
+                  >
+                    <DateBlock date={event.starts_at} />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-display text-cut-900 truncate text-[1.375rem] leading-tight font-semibold">
+                        {event.title}
+                      </p>
+                      <p className="text-ink-500 mt-1 truncate text-sm">
+                        {formatEventDate(event.starts_at)}
+                        {event.venue_name ? ` · ${event.venue_name}` : ''}
+                      </p>
+                    </div>
+                    <StatusPill status={event.status} className="hidden sm:inline-flex" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section>
+          <SectionHeading eyebrow="Tonight" title="At the door" />
+          <div className="space-y-3">
+            <ActionCard
+              href="/scan"
+              icon={<QrCode className="size-5" aria-hidden />}
+              title="Open the scanner"
+              description="Scan passes, search by name, register a walk-in."
+            />
+            {canOrganise ? (
+              <>
+                <ActionCard
+                  href="/contacts"
+                  icon={<Users className="size-5" aria-hidden />}
+                  title="Guest list"
+                  description="Import contacts, search, tag, add to an event."
+                />
+                {featured ? (
+                  <ActionCard
+                    href={`/events/${featured.id}/broadcasts`}
+                    icon={<Radio className="size-5" aria-hidden />}
+                    title="Broadcast desk"
+                    description="Reach everyone who has arrived, in-app and on WhatsApp."
+                  />
+                ) : null}
+              </>
             ) : null}
           </div>
-        ) : (
-          <ul className="space-y-3">
-            {upcoming.map((event) => (
-              <li key={event.id}>
-                <Link
-                  href={`/events/${event.id}`}
-                  className="border-ink-300 hover:border-cut-700 flex flex-wrap items-center justify-between gap-4 rounded-lg border bg-white p-4 transition-colors"
-                >
-                  <div className="min-w-0">
-                    <p className="font-display text-cut-900 text-xl font-semibold">{event.title}</p>
-                    <p className="text-ink-500 text-sm">
-                      {formatEventDate(event.starts_at)}
-                      {event.venue_name ? ` · ${event.venue_name}` : ''}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {event.auction_enabled ? (
-                      <span className="label-caps bg-cut-100 text-cut-900 rounded-full px-3 py-1">
-                        Auction
-                      </span>
-                    ) : null}
-                    <StatusPill status={event.status} />
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="mt-10">
-        <h2 className="text-cut-900 mb-4">At the door</h2>
-        <Link
-          href="/scan"
-          className="border-ink-300 hover:border-cut-700 flex items-center gap-4 rounded-lg border bg-white p-4 transition-colors"
-        >
-          <QrCode className="text-cut-900 size-8 shrink-0" aria-hidden />
-          <div>
-            <p className="text-ink-900 font-semibold">Open the scanner</p>
-            <p className="text-ink-500 text-sm">Scan passes, search by name, register a walk-in.</p>
-          </div>
-        </Link>
-        {canCreate ? (
-          <Link
-            href="/contacts"
-            className="border-ink-300 hover:border-cut-700 mt-3 flex items-center gap-4 rounded-lg border bg-white p-4 transition-colors"
-          >
-            <Users className="text-cut-900 size-8 shrink-0" aria-hidden />
-            <div>
-              <p className="text-ink-900 font-semibold">Contacts</p>
-              <p className="text-ink-500 text-sm">Import a guest list, search, tag.</p>
-            </div>
-          </Link>
-        ) : null}
-      </section>
+        </section>
+      </div>
     </StaffShell>
   );
 }
 
-const PILL: Record<string, string> = {
-  draft: 'bg-ink-100 text-ink-700',
-  published: 'bg-sky-500 text-white',
-  live: 'bg-gold-500 text-ink-900',
-  closed: 'bg-green-600 text-white',
-  archived: 'bg-ink-300 text-ink-700',
-};
+async function featuredCounts(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  eventId: string,
+): Promise<{ invited: number; accepted: number; attendees: number; checkedIn: number }> {
+  const [invited, accepted, attendees, checkedIn] = await Promise.all([
+    supabase.from('invitations').select('id', { count: 'exact', head: true }).eq('event_id', eventId),
+    supabase
+      .from('invitations')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_id', eventId)
+      .eq('status', 'accepted'),
+    supabase.from('attendees').select('id', { count: 'exact', head: true }).eq('event_id', eventId),
+    supabase
+      .from('attendees')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_id', eventId)
+      .not('checked_in_at', 'is', null),
+  ]);
+  return {
+    invited: invited.count ?? 0,
+    accepted: accepted.count ?? 0,
+    attendees: attendees.count ?? 0,
+    checkedIn: checkedIn.count ?? 0,
+  };
+}
 
-function StatusPill({ status }: { status: string }) {
+function daypart(): string {
+  const hour = Number(
+    new Intl.DateTimeFormat('en-ZA', { timeZone: TIME_ZONE, hour: 'numeric', hour12: false }).format(
+      new Date(),
+    ),
+  );
+  if (hour < 12) return 'morning';
+  if (hour < 17) return 'afternoon';
+  return 'evening';
+}
+
+function EmptyHero({ canCreate }: { canCreate: boolean }) {
   return (
-    <span className={`label-caps rounded-full px-3 py-1 ${PILL[status] ?? PILL.draft}`}>
-      {status === 'live' ? (
-        <span className="bg-ink-900 mr-1.5 inline-block size-2 animate-pulse rounded-full align-middle" />
-      ) : null}
-      {status}
-    </span>
+    <section className="bg-hero watermark shadow-hero relative overflow-hidden rounded-2xl p-10 text-white">
+      <div className="relative z-10 max-w-xl">
+        <p className="eyebrow eyebrow-on-dark">Getting started</p>
+        <h2 className="font-display mt-4 text-4xl leading-none font-bold sm:text-5xl">
+          Your first event starts here.
+        </h2>
+        <p className="mt-4 text-white/75">
+          {canCreate
+            ? 'Create an event, import a guest list, and send invitations. Passes, the door scanner and the auction follow from there.'
+            : 'Nothing has been published to your department yet.'}
+        </p>
+        {canCreate ? (
+          <Button asChild variant="gold" size="lg" className="mt-6 h-11 px-5">
+            <Link href="/events/new">
+              <Plus className="size-4" aria-hidden /> Create an event
+            </Link>
+          </Button>
+        ) : null}
+      </div>
+    </section>
   );
 }

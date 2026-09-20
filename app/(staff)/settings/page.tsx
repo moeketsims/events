@@ -50,9 +50,9 @@ export default async function SettingsPage() {
 
       <section className="mb-10">
         <h2 className="text-cut-900 mb-4">Staff</h2>
-        <div className="border-ink-300 overflow-hidden rounded-lg border bg-white">
+        <div className="card table-card overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="border-ink-300 bg-ink-100 border-b">
+            <thead className="border-hairline bg-cut-50 border-b">
               <tr>
                 <th className="label-caps text-ink-500 px-4 py-3 text-left">Name</th>
                 <th className="label-caps text-ink-500 px-4 py-3 text-left">Email</th>
@@ -61,7 +61,7 @@ export default async function SettingsPage() {
             </thead>
             <tbody>
               {(users ?? []).map((user) => (
-                <tr key={user.id} className="border-ink-300 border-b last:border-0">
+                <tr key={user.id} className="border-hairline border-b last:border-0">
                   <td className="px-4 py-3">{user.full_name ?? '—'}</td>
                   <td className="text-ink-700 px-4 py-3">{user.email}</td>
                   <td className="px-4 py-2">
@@ -91,7 +91,7 @@ export default async function SettingsPage() {
 
       <section className="mb-10">
         <h2 className="text-cut-900 mb-4">Invite a colleague</h2>
-        <div className="border-ink-300 rounded-lg border bg-white p-6">
+        <div className="card p-6">
           <InviteForm />
         </div>
       </section>
@@ -102,7 +102,7 @@ export default async function SettingsPage() {
           {integrations.map((item) => (
             <li
               key={item.name}
-              className="border-ink-300 flex items-start gap-3 rounded-lg border bg-white p-4"
+              className="card flex items-start gap-3 p-4"
             >
               {item.ready ? (
                 <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-green-600" aria-hidden />

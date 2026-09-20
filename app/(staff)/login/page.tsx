@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { Logo } from '@/components/brand/Logo';
+import { BrandPanel } from '@/components/brand/BrandPanel';
 import { getStaffProfile } from '@/lib/auth/staff';
 import { LoginForm } from './LoginForm';
 
@@ -31,28 +31,48 @@ export default async function LoginPage({
   const linkError = error ? LINK_ERRORS[error] : undefined;
 
   return (
-    <div className="bg-cut-50 flex min-h-dvh flex-col items-center justify-center px-4 py-12">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 flex justify-center">
-          <Logo variant="vertical" size="sm" priority />
-        </div>
+    <div className="min-h-dvh bg-white lg:grid lg:grid-cols-[1.1fr_1fr]">
+      <BrandPanel
+        eyebrow="CUT Events"
+        headline={
+          <>
+            Every CUT event.
+            <br />
+            One <span className="text-gold-500">platform</span>.
+          </>
+        }
+        copy="Invitations and RSVP, QR passes at the door, live broadcasts to the room, and silent auctions on the screen. Built for Institutional Advancement and every department."
+        points={[
+          'Send invitations by email and WhatsApp, track every reply.',
+          'Replace the paper register with a scan at the door.',
+          'Reach only the people who have actually arrived.',
+          'Run the auction on phones and project it live, without names.',
+        ]}
+        className="min-h-[38vh] lg:min-h-dvh"
+      />
 
-        <div className="border-ink-300 rounded-lg border bg-white p-6">
-          <h1 className="text-cut-900 mb-1 text-center text-3xl">CUT Events</h1>
-          <p className="text-ink-500 mb-6 text-center text-sm">Staff sign in</p>
+      <div className="animate-fade-up flex items-center justify-center px-6 py-14 sm:px-12">
+        <div className="w-full max-w-sm">
+          <p className="eyebrow">Staff sign in</p>
+          <h2 className="text-cut-900 mt-3 text-[2.25rem] leading-none font-bold">Welcome back</h2>
+          <p className="text-ink-500 mt-3 text-[0.9375rem]">
+            Use your CUT email address. We send a six-digit code; there is no password.
+          </p>
 
           {linkError ? (
-            <p role="alert" className="mb-4 rounded-md bg-red-700/10 p-3 text-sm text-red-700">
+            <p role="alert" className="mt-6 rounded-lg bg-red-700/8 p-3 text-sm text-red-700">
               {linkError}
             </p>
           ) : null}
 
-          <LoginForm next={safeNext} />
-        </div>
+          <div className="mt-8">
+            <LoginForm next={safeNext} />
+          </div>
 
-        <p className="text-ink-500 mt-6 text-center text-sm">
-          Guests do not sign in. Your invitation link is your RSVP and your pass link is your entry.
-        </p>
+          <p className="text-ink-500 border-hairline mt-10 border-t pt-6 text-sm">
+            Guests never sign in. Your invitation link is your RSVP and your pass link is your entry.
+          </p>
+        </div>
       </div>
     </div>
   );
