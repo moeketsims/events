@@ -18,20 +18,24 @@ Prerequisites the **user** must supply before Week 1 finishes (the agent should 
 
 **Goal:** `main` deploys to Vercel, migrations apply to the dev project, a seeded event is visible after OTP login.
 
-### T1.1 Scaffold the application
+### T1.1 Scaffold the application ✅
 - `pnpm create next-app@latest` with TypeScript, App Router, Tailwind, ESLint, `src` off, import alias `@/*`.
 - Add shadcn/ui (`pnpm dlx shadcn@latest init`), lucide, zod, `@supabase/supabase-js`, `@supabase/ssr`, `qrcode`, `html5-qrcode`, vitest, prettier.
 - `next/font/google` Barlow Condensed and Source Sans 3 in `app/layout.tsx`, exposed as CSS variables `--font-display` and `--font-body`.
 - Copy `public/brand/favicon-src/favicon.ico` → `app/favicon.ico`, `favicon-32x32.png` → `app/icon.png`, and `public/icons/apple-touch-icon.png` → `app/apple-icon.png`. Set `metadata.openGraph.images` to `/og-image.png`.
 - `.gitignore`, `.env.example` with every variable from BUILD-SPEC §3, `README.md` with setup steps.
 - **Done when:** `pnpm dev` renders a page with the font applied; `pnpm lint && pnpm typecheck && pnpm test` pass with one placeholder test.
+- **Verified 20 Sep 2026:** `/` and `/styleguide` render at 200 with Barlow Condensed on headings and Source Sans 3 on body (confirmed from computed styles in the browser, not by eye alone); `pnpm lint`, `pnpm typecheck` and `pnpm test` all pass — 35 real tests rather than a placeholder, because T1.5 landed in the same sitting.
+- **Deviations:** pinned Next **15.5.25**, because `create-next-app@latest` now installs 16.x and BUILD-SPEC §2 names 15.x. `next lint` is removed in recent Next, so `pnpm lint` runs `eslint .` directly; BUILD-SPEC §11a updated to match.
 
-### T1.2 Design tokens and brand components ∥
+### T1.2 Design tokens and brand components ∥ ✅
 - `app/globals.css` `@theme` block from DESIGN-SYSTEM §2.2; shadcn variable mapping; `.theme-display` class.
 - **Already done:** `scripts/fetch-brand-assets.{sh,ps1}` have been run; the official logo files, watermark, spacing guide and CUT favicon set are in `public/brand/` with `SOURCES.md`. `scripts/generate-derived-assets.py` has produced PWA icons, the OG image, a banner placeholder and six lot placeholders (inventory in DESIGN-SYSTEM §8). Do not re-fetch unless CUT updates its logo.
 - `components/brand/Logo.tsx`, `BrandFrame.tsx` using those files.
 - `public/manifest.webmanifest` referencing `public/icons/*` (name "CUT Events", short name "CUT Events", theme `#003261`, background `#FFFFFF`, `display: standalone`).
 - **Done when:** a `/styleguide` dev-only page shows tokens, type scale, buttons, badges, and both logo variants on light and dark.
+- **Verified 20 Sep 2026:** `/styleguide` renders every token, the type scale, buttons, badges, cards, both logo variants on white and on `cut-900` with the plate, and the `.theme-display` projection surface. Computed styles confirm `.theme-display` background `#001738`, card `#003261`, gold `#FBB927`, plate white with 16 px padding and 8 px radius, primary button `#003261`, attendee bid button 56 px tall, projection amount 160 px Barlow Condensed. The page 404s in production builds.
+- **Note:** `components/brand/Logo.tsx` draws every size from `logo-h-lg.png` / `logo-v-lg.png` and lets the Next image optimiser produce the density variants. `logo-h-sm.png` is 175 px wide, barely above its own 160 px minimum display size, so using it directly is soft on any 2× screen. The small files stay in `public/brand` for email HTML and favicons, where a fixed URL is required.
 
 ### T1.3 Supabase project link and migrations
 - `supabase init`, `supabase link --project-ref …`.
@@ -47,11 +51,12 @@ Prerequisites the **user** must supply before Week 1 finishes (the agent should 
 - `/settings` minimal: platform admin sees users of the department with a role dropdown and an "Invite staff" form (creates the auth user via the admin API and sends a magic link).
 - **Done when:** a seeded user receives a code within 30 s, logs in, sees the dashboard; an unauthenticated visit to `/dashboard` redirects to `/login`; a `door_staff` user visiting `/events/new` gets 403; the admin changes a role and the change takes effect on next request.
 
-### T1.5 Token signing library ∥
+### T1.5 Token signing library ∥ ✅
 - `lib/auth/pass.ts` per BUILD-SPEC §6, constant-time compare.
 - `lib/money.ts` with `formatZAR`, `bidStep`, `nextMinBid`.
 - Unit tests for both, including the SQL-parity table of cases for `bidStep`.
 - **Done when:** tests pass; tampered token returns `null`.
+- **Verified 20 Sep 2026:** 35 tests pass. Tampered signature, tampered id, swapped kind prefix, wrong length and malformed input all return `null`; `bidStep` is pinned to the same eleven-case table as the SQL function. Token length is **47** characters, not 46 as BUILD-SPEC §6 implied (1 + 1 + 22 + 1 + 22); the spec's format string is unchanged and correct.
 
 ### T1.6 Seed script
 - `supabase/seed/seed.ts` per BUILD-SPEC §11 using the admin client and Auth admin API. `pnpm seed`.

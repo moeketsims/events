@@ -1,0 +1,186 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+/* ------------------------------------------------------------------ *
+ * CUT brand tokens — DESIGN-SYSTEM §2.2. Single source of truth.
+ * ------------------------------------------------------------------ */
+@theme {
+  /* brand */
+  --color-cut-950: #001738; /* projection background, deepest navy */
+  --color-cut-900: #003261; /* CUT Blue, primary */
+  --color-cut-800: #004072;
+  --color-cut-700: #004b88; /* hover, links */
+  --color-cut-600: #255c91;
+  --color-cut-100: #e6eef6; /* tinted surfaces */
+  --color-cut-50: #f3f7fb;
+
+  /* accents (use sparingly; the 30 % rule) */
+  --color-gold-500: #fbb927; /* leading bid, live indicator, primary CTA on dark */
+  --color-gold-600: #e0a31e;
+  --color-sky-500: #0082d1; /* informational */
+  --color-green-600: #289728; /* success, checked in */
+  --color-red-700: #a12830; /* error, destructive, outbid */
+
+  /* logo-only colours — never use as UI colours (DESIGN-SYSTEM §2.1) */
+  --color-logo-maroon: #881010;
+  --color-logo-gold: #f8b000;
+
+  /* neutrals */
+  --color-ink-900: #111827;
+  --color-ink-700: #374151;
+  --color-ink-500: #6b7280;
+  --color-ink-300: #d1d5db;
+  --color-ink-100: #f3f4f6;
+  --color-paper: #ffffff;
+
+  /* typography */
+  --font-display: var(--font-barlow-condensed), 'Arial Narrow', system-ui, sans-serif;
+  --font-body: var(--font-source-sans), system-ui, -apple-system, sans-serif;
+
+  --radius-card: 0.5rem;
+}
+
+/* ------------------------------------------------------------------ *
+ * shadcn/ui variable mapping — DESIGN-SYSTEM §2.2 (light surfaces)
+ * ------------------------------------------------------------------ */
+:root {
+  --radius: 0.5rem;
+  --background: var(--color-paper);
+  --foreground: var(--color-ink-900);
+  --card: var(--color-paper);
+  --card-foreground: var(--color-ink-900);
+  --popover: var(--color-paper);
+  --popover-foreground: var(--color-ink-900);
+  --primary: var(--color-cut-900);
+  --primary-foreground: var(--color-paper);
+  --secondary: var(--color-cut-100);
+  --secondary-foreground: var(--color-cut-900);
+  --muted: var(--color-ink-100);
+  --muted-foreground: var(--color-ink-500);
+  --accent: var(--color-gold-500);
+  --accent-foreground: var(--color-ink-900);
+  --destructive: var(--color-red-700);
+  --destructive-foreground: var(--color-paper);
+  --border: var(--color-ink-300);
+  --input: var(--color-ink-300);
+  --ring: var(--color-cut-700);
+}
+
+/* Projection surface — DESIGN-SYSTEM §5.4. Applied to <html> on /display. */
+.theme-display {
+  --background: var(--color-cut-950);
+  --foreground: var(--color-paper);
+  --card: var(--color-cut-900);
+  --card-foreground: var(--color-paper);
+  --popover: var(--color-cut-900);
+  --popover-foreground: var(--color-paper);
+  --primary: var(--color-gold-500);
+  --primary-foreground: var(--color-cut-950);
+  --secondary: var(--color-cut-800);
+  --secondary-foreground: var(--color-paper);
+  --muted: var(--color-cut-800);
+  --muted-foreground: #a8c0da;
+  --accent: var(--color-gold-500);
+  --accent-foreground: var(--color-cut-950);
+  --border: var(--color-cut-700);
+  --input: var(--color-cut-700);
+  --ring: var(--color-gold-500);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  h1 {
+    font-size: 2.25rem;
+    line-height: 1.15;
+    font-weight: 700;
+  }
+
+  h2 {
+    font-size: 1.75rem;
+    line-height: 1.2;
+    font-weight: 600;
+  }
+
+  h3 {
+    font-size: 1.125rem;
+    line-height: 1.3;
+    font-weight: 600;
+  }
+
+  /* Amounts are always tabular so columns and the projection do not jitter. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Uppercase labels — DESIGN-SYSTEM §3 */
+  .label-caps {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  /* Body copy never exceeds 68ch and is never justified. */
+  .measure {
+    max-width: 68ch;
+  }
+}
+
+/* DESIGN-SYSTEM §7 — respect reduced motion everywhere. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

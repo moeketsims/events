@@ -775,6 +775,8 @@ Staff users are created for the POC by the seed script (three users: organiser, 
 
 Both tokens are HMAC-signed, URL-safe, and short enough for a QR code at medium error correction.
 
+Each is 47 characters: `kind` + `.` + 22 + `.` + 22.
+
 ```
 pass token   :  p.<id22>.<sig22>
 rsvp token   :  r.<id22>.<sig22>
@@ -962,7 +964,7 @@ Idempotent; deletes and recreates its own department `demo`.
   "dev": "next dev",
   "build": "next build",
   "start": "next start",
-  "lint": "next lint",
+  "lint": "eslint .",
   "typecheck": "tsc --noEmit",
   "test": "vitest run",
   "test:watch": "vitest",

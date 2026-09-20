@@ -1,0 +1,8 @@
+.next/
+node_modules/
+pnpm-lock.yaml
+public/
+lib/db/types.ts
+components/ui/
+coverage/
+*.md
