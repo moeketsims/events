@@ -1,11 +1,10 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Atmosphere } from '@/components/brand/Atmosphere';
-import { LiveStrip } from '@/components/brand/LiveStrip';
+import { EventCard } from '@/components/brand/EventCard';
 import { Logo } from '@/components/brand/Logo';
-import { Marquee } from '@/components/brand/Marquee';
 import { getStaffProfile } from '@/lib/auth/staff';
-import { getShowcase } from '@/lib/public/showcase';
+import { getPublicEvent } from '@/lib/public/showcase';
 import { LoginForm } from './LoginForm';
 
 export const metadata = { title: 'Sign in' };
@@ -21,19 +20,15 @@ const LINK_ERRORS: Record<string, string> = {
     'That sign-in link was incomplete — it may have been cut short by an email client. Ask for a code below instead.',
 };
 
-const PILLARS = [
-  'Invitations by email and WhatsApp',
-  'QR passes at the door',
-  'Broadcasts to the room',
-  'Silent auctions on the screen',
-  'Winners paid before they leave',
-];
+// Institutional Advancement's four pillars, as CUT states them.
+const PILLARS = ['Fundraising', 'Development', 'Alumni Relations', 'Stewardship'];
 
 /**
  * The sign-in page is a single screen: `h-dvh` with the hero row as the only
- * flexible region, and type that scales with viewport height as well as width
- * (the `vh` term in each clamp). Nothing below the fold on any laptop from
- * 1366×768 up; on phones the columns stack and the page scrolls as normal.
+ * flexible region, and type that scales with viewport height as well as width.
+ * It is outward-facing, so it shows the featured event as a poster would —
+ * title, date, venue — and nothing that is counted or priced. Figures live on
+ * the dashboard, behind sign-in.
  */
 export default async function LoginPage({
   searchParams,
@@ -43,7 +38,7 @@ export default async function LoginPage({
   const profile = await getStaffProfile();
   if (profile) redirect('/dashboard');
 
-  const [{ next, error }, showcase] = await Promise.all([searchParams, getShowcase()]);
+  const [{ next, error }, event] = await Promise.all([searchParams, getPublicEvent()]);
   // Only same-origin paths, so ?next= cannot be used as an open redirect.
   const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : undefined;
   // Looked up rather than rendered, so the URL cannot inject arbitrary text.
@@ -90,8 +85,8 @@ export default async function LoginPage({
               every department that hosts.
             </p>
 
-            <div className="reveal mt-7" style={{ '--reveal-delay': '0.45s' } as React.CSSProperties}>
-              <LiveStrip data={showcase} compact />
+            <div className="reveal mt-7 max-w-xl" style={{ '--reveal-delay': '0.45s' } as React.CSSProperties}>
+              <EventCard event={event} compact />
             </div>
           </section>
 
@@ -126,24 +121,24 @@ export default async function LoginPage({
           </section>
         </div>
 
-        {/* Foot ticker */}
+        {/* Foot: still, institutional */}
         <footer className="reveal shrink-0 pb-5" style={{ '--reveal-delay': '0.6s' } as React.CSSProperties}>
           <div className="hairline-gold mb-4" />
-          <div className="flex items-center justify-between gap-6">
-            <Marquee speed={48} className="min-w-0 flex-1">
-              {PILLARS.map((p) => (
-                <span
-                  key={p}
-                  className="inline-flex items-center gap-4 text-[0.75rem] font-semibold tracking-[0.14em] text-white/55 uppercase whitespace-nowrap"
-                >
-                  <span className="text-gold-500 text-[9px]">◆</span>
+          <div className="flex flex-wrap items-center justify-between gap-x-8 gap-y-3">
+            <ul className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[0.75rem] font-semibold tracking-[0.14em] text-white/55 uppercase">
+              {PILLARS.map((p, i) => (
+                <li key={p} className="inline-flex items-center gap-6">
+                  {i > 0 ? <span aria-hidden className="text-gold-500 text-[8px]">◆</span> : null}
                   {p}
-                </span>
+                </li>
               ))}
-            </Marquee>
-            <span className="font-display text-gold-500 shrink-0 text-lg font-semibold tracking-wide">
-              Thinking Beyond
-            </span>
+            </ul>
+            <p className="flex items-center gap-4 text-sm text-white/45">
+              <span className="hidden sm:inline">Central University of Technology, Free State</span>
+              <span className="font-display text-gold-500 text-lg font-semibold tracking-wide">
+                Thinking Beyond
+              </span>
+            </p>
           </div>
         </footer>
       </div>

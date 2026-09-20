@@ -40,6 +40,37 @@ const EMPTY: Showcase = {
   recentBids: [],
 };
 
+export type PublicEvent = NonNullable<Showcase['event']>;
+
+/**
+ * What an outward-facing page may show: the featured event's title, date,
+ * venue and whether it is live. No counts, no money, no bids. Those figures
+ * belong to signed-in staff (`getShowcase`, used by authenticated and
+ * projection surfaces only).
+ */
+export async function getPublicEvent(): Promise<PublicEvent | null> {
+  try {
+    const db = createAdminClient();
+    const { data: events } = await db
+      .from('events')
+      .select('id, title, starts_at, venue_name, status')
+      .in('status', ['live', 'published'])
+      .order('starts_at', { ascending: true })
+      .limit(5);
+    const event = events?.find((e) => e.status === 'live') ?? events?.[0];
+    if (!event) return null;
+    return {
+      id: event.id,
+      title: event.title,
+      startsAt: event.starts_at,
+      venue: event.venue_name,
+      status: event.status,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function getShowcase(): Promise<Showcase> {
   try {
     const db = createAdminClient();

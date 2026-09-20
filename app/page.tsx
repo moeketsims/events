@@ -1,13 +1,10 @@
 import Link from 'next/link';
 import { ArrowRight, Gavel, Mail, QrCode, Radio, Wallet } from 'lucide-react';
 import { Atmosphere } from '@/components/brand/Atmosphere';
-import { LiveStrip } from '@/components/brand/LiveStrip';
+import { EventCard } from '@/components/brand/EventCard';
 import { Logo } from '@/components/brand/Logo';
 import { Button } from '@/components/ui/button';
-import { formatBidderNumber } from '@/lib/dates';
-import { formatZAR } from '@/lib/money';
-import { getShowcase } from '@/lib/public/showcase';
-import { cn } from '@/lib/utils';
+import { getPublicEvent } from '@/lib/public/showcase';
 
 const STEPS = [
   {
@@ -42,9 +39,15 @@ const STEPS = [
   },
 ];
 
+const PILLARS = ['Fundraising', 'Development', 'Alumni Relations', 'Stewardship'];
+
+/**
+ * Outward-facing. Shows the featured event as a poster would and explains the
+ * platform; nothing counted or priced appears here. Figures, lots and bids are
+ * for signed-in staff and, on the night, for the projection in the room.
+ */
 export default async function HomePage() {
-  const showcase = await getShowcase();
-  const featuredLots = showcase.lots.filter((l) => l.highBid !== null).slice(0, 6);
+  const event = await getPublicEvent();
 
   return (
     <div className="relative min-h-dvh overflow-hidden text-white">
@@ -107,7 +110,7 @@ export default async function HomePage() {
           </div>
 
           <div className="reveal" style={{ '--reveal-delay': '0.5s' } as React.CSSProperties}>
-            <LiveStrip data={showcase} />
+            <EventCard event={event} />
           </div>
         </section>
 
@@ -138,50 +141,6 @@ export default async function HomePage() {
           </ol>
         </section>
 
-        {/* The board */}
-        {featuredLots.length > 0 ? (
-          <section className="py-20">
-            <div className="hairline-gold mb-14" />
-            <div className="flex flex-wrap items-end justify-between gap-6">
-              <div>
-                <p className="eyebrow eyebrow-on-dark tracking-[0.18em]">The board, as the room sees it</p>
-                <h2 className="font-display mt-5 text-[clamp(2.5rem,5vw,4.5rem)] leading-[0.95] font-bold">
-                  Numbers in the room. <span className="text-gold-metallic">Names for the team.</span>
-                </h2>
-              </div>
-              <p className="max-w-sm text-[0.9375rem] text-white/60">
-                What the projector shows tonight. Every bidder number was assigned at the door from a
-                QR scan, so the team always knows who is behind it.
-              </p>
-            </div>
-
-            <ul className="mt-12 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {featuredLots.map((lot) => (
-                <li
-                  key={lot.lotNumber}
-                  className={cn(
-                    'glass-panel relative overflow-hidden rounded-2xl p-6 transition-transform duration-500 hover:-translate-y-1',
-                  )}
-                >
-                  <div className="flex items-center justify-between text-[0.6875rem] font-bold tracking-[0.14em] text-white/50 uppercase">
-                    <span>Lot {lot.lotNumber}</span>
-                    <span className={cn(lot.status === 'open' ? 'text-gold-500' : 'text-white/40')}>
-                      {lot.status === 'open' ? 'Open' : lot.status}
-                    </span>
-                  </div>
-                  <p className="font-display mt-4 min-h-[2.4em] text-[1.5rem] leading-[1.15] font-semibold text-balance">
-                    {lot.title}
-                  </p>
-                  <p className="numeral text-gold-metallic mt-6 text-[3rem]">{formatZAR(lot.highBid ?? 0)}</p>
-                  <p className="mt-2 text-sm text-white/55">
-                    Leading · Bidder {formatBidderNumber(lot.bidderNumber)}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
         {/* Close */}
         <section className="py-24 text-center">
           <div className="hairline-gold mx-auto mb-14 max-w-2xl" />
@@ -196,7 +155,16 @@ export default async function HomePage() {
               </Link>
             </Button>
           </div>
-          <p className="mt-16 text-sm text-white/45">
+
+          <ul className="mt-16 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[0.75rem] font-semibold tracking-[0.14em] text-white/55 uppercase">
+            {PILLARS.map((p, i) => (
+              <li key={p} className="inline-flex items-center gap-6">
+                {i > 0 ? <span aria-hidden className="text-gold-500 text-[8px]">◆</span> : null}
+                {p}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-6 text-sm text-white/45">
             Central University of Technology, Free State · Bloemfontein +27 51 507 3911 · Welkom +27
             57 910 3500 ·{' '}
             <Link href="https://www.cut.ac.za" className="text-white/70 underline underline-offset-4">
