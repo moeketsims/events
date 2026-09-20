@@ -81,10 +81,14 @@ Prerequisites the **user** must supply before Week 1 finishes (the agent should 
 - **Done when:** tests pass; tampered token returns `null`.
 - **Verified 20 Sep 2026:** 35 tests pass. Tampered signature, tampered id, swapped kind prefix, wrong length and malformed input all return `null`; `bidStep` is pinned to the same eleven-case table as the SQL function. Token length is **47** characters, not 46 as BUILD-SPEC §6 implied (1 + 1 + 22 + 1 + 22); the spec's format string is unchanged and correct.
 
-### T1.6 Seed script
+### T1.6 Seed script ✅
 - `supabase/seed/seed.ts` per BUILD-SPEC §11 using the admin client and Auth admin API. `pnpm seed`.
 - Six lot images already exist at `supabase/seed/lots/lot-{1..6}.jpg` (branded placeholders, 1200×900, ~40 KB each); the seed uploads them to the `lot-images` bucket. Institutional Advancement will supply real photographs before the pilot.
 - **Done when:** running twice leaves exactly one demo department, 40 contacts, 1 event, 40 invitations, 28+ attendees (12 checked in with bidder numbers 1–12), 1 auction, 6 lots, seeded bids; the script prints organiser magic link, two pass URLs, display URL.
+- **Verified 20 Sep 2026** — run twice back to back, then counted: 1 department, 3 staff profiles, 40 contacts, 1 event, 2 event questions, 40 invitations (28 accepted / 6 declined / 6 pending), 34 rsvps, 35 attendees (28 acceptances plus 7 plus-ones), 12 checked in holding distinct bidder numbers 1–12, 28 consents, 1 auction, 6 lots each with its image, 14 bids, 3 auth users. No duplicates. R20 250 on the board across 5 of 6 lots, with lot 6 left empty so the demo has a first bid to make. All six lot images upload to the `lot-images` bucket and serve publicly (HTTP 200, 40 KB). **7.1 seconds**, against the 2-minute budget in the definition of done.
+- **Every seeded bid goes through `place_bid`.** The seed has no shortcut into the ledger because 0005 gives `bids` no insert policy at all, so the seed exercises the same path the bidding page will.
+- **Defect found and fixed:** the printed magic links did not work. `auth.admin.generateLink()` returns an `action_link` pointing at Supabase's own `/auth/v1/verify`, which hands the session back in the **URL fragment** — a server component can never read it, so following the link landed on `/login` with no session and no explanation. Links are now built from `properties.hashed_token` against a new `app/auth/confirm/route.ts`, which exchanges the token server-side with `verifyOtp`. Confirmed: the organiser link signs straight in to a dashboard showing the seeded gala, 40 contacts, and the AUCTION and LIVE pills. The staff invitation form in `/settings` was building its link the same wrong way and is fixed too.
+- **Note:** contacts live in `supabase/seed/data.ts` with the reasoning in its header — invented names, `@example.com` (RFC 2606, undeliverable) and the `+27 82 000 00xx` block, so nothing here can reach a real person.
 
 ### T1.7 CI/CD and hosting
 - `ci.yml`: install, lint, typecheck, test, `supabase db push --dry-run` on PRs.

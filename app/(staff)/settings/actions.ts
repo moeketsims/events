@@ -122,11 +122,17 @@ export async function inviteStaff(
 
   if (profileError) return { error: `The profile could not be set up: ${profileError.message}` };
 
+  // Built against our own /auth/confirm route: Supabase's action_link returns
+  // the session in the URL fragment, which the server cannot read.
   const { data: link } = await admin.auth.admin.generateLink({
     type: 'magiclink',
     email,
     options: { redirectTo: `${APP_URL}/dashboard` },
   });
+  const hashedToken = link?.properties?.hashed_token;
+  const magicLink = hashedToken
+    ? `${APP_URL}/auth/confirm?token_hash=${hashedToken}&type=magiclink&next=/dashboard`
+    : undefined;
 
   await admin.rpc('log_audit', {
     p_actor_id: actor.id,
@@ -144,6 +150,6 @@ export async function inviteStaff(
     notice: smtpConfigured
       ? `${email} can now sign in. A magic link has been emailed to them.`
       : `${email} can now sign in. No email provider is configured yet, so send them this link yourself.`,
-    magicLink: link?.properties?.action_link,
+    magicLink,
   };
 }
