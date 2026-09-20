@@ -86,6 +86,38 @@ One-time settings that are **not** in a migration because they are not schema (B
 - [x] **Auth → Providers → Email**: public sign-ups disabled — `enable_signup = false` locally, and the sign-in action passes `shouldCreateUser: false` so a typo cannot silently create an account with no department or role. Staff accounts come from the seed or from a platform admin in `/settings`.
 - [x] **Realtime**: `realtime.send` confirmed working on the local stack by `select realtime_selftest()`. Re-confirm on the dev project; if public channels cannot be enabled there, set `NEXT_PUBLIC_REALTIME_MODE=poll`.
 
+## Deployment and CI
+
+Three workflows in `.github/workflows`:
+
+| Workflow | When | What |
+|---|---|---|
+| `ci.yml` | every push and pull request | lint, typecheck, unit tests, production build; and, in a second job, starts a real Supabase stack, applies every migration from empty, runs both schema scripts and fails if any table lacks RLS enabled, forced and a policy |
+| `migrate.yml` | after CI passes on `main` | `supabase db push` to the dev project. It never runs on a red build. |
+| `keepalive.yml` | 04:00 UTC Mondays | `GET /api/cron/keepalive`, which reads a row through the admin client so the free project does not pause after seven idle days |
+
+### Repository secrets
+
+Settings → Secrets and variables → Actions:
+
+| Secret | For | Where to get it |
+|---|---|---|
+| `SUPABASE_ACCESS_TOKEN` | `migrate.yml` | supabase.com/dashboard/account/tokens |
+| `SUPABASE_PROJECT_REF` | `migrate.yml` | Project Settings → General → Reference ID |
+| `SUPABASE_DB_PASSWORD` | `migrate.yml` | the dev project's database password |
+| `APP_URL` | `keepalive.yml` | the production origin, e.g. `https://cut-events.vercel.app` |
+| `CRON_SECRET` | `keepalive.yml` | the same value as `CRON_SECRET` in the Vercel environment |
+
+`migrate.yml` and `keepalive.yml` fail with a named error listing what is missing rather than a confusing CLI failure.
+
+### Vercel environment
+
+Every variable in `.env.example` except `SUPABASE_DB_URL`, which is only used by CI.
+
+**Function region is not yet set.** BUILD-SPEC §11b calls for `regions: ["cpt1"]` (Cape Town) when the Supabase project is in an African or European region, because a cross-continent hop adds 150–300 ms to every bid. The dev project's region has not been confirmed, and pairing a Cape Town function with a US database would be worse than the default, so `vercel.json` sets no region yet. Add it once the region is known.
+
+`vercel.json` sends `X-Robots-Tag: noindex` and `Referrer-Policy: no-referrer` on `/p/*` and `/rsvp/*`. The signed token in those URLs *is* the credential, so it must not reach a third party through a `Referer` header or a search index.
+
 ## Assets
 
 `public/brand/` holds CUT's official logo files, watermark, spacing guide and favicon set, fetched from https://www.cut.ac.za/ci by `scripts/fetch-brand-assets.{sh,ps1}`; provenance is in `public/brand/SOURCES.md`. These files belong to the university and are used under its brand rules for an internal CUT system. `scripts/generate-derived-assets.py` produces the PWA icons, link-preview image and placeholders from them.

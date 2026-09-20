@@ -90,12 +90,17 @@ Prerequisites the **user** must supply before Week 1 finishes (the agent should 
 - **Defect found and fixed:** the printed magic links did not work. `auth.admin.generateLink()` returns an `action_link` pointing at Supabase's own `/auth/v1/verify`, which hands the session back in the **URL fragment** — a server component can never read it, so following the link landed on `/login` with no session and no explanation. Links are now built from `properties.hashed_token` against a new `app/auth/confirm/route.ts`, which exchanges the token server-side with `verifyOtp`. Confirmed: the organiser link signs straight in to a dashboard showing the seeded gala, 40 contacts, and the AUCTION and LIVE pills. The staff invitation form in `/settings` was building its link the same wrong way and is fixed too.
 - **Note:** contacts live in `supabase/seed/data.ts` with the reasoning in its header — invented names, `@example.com` (RFC 2606, undeliverable) and the `+27 82 000 00xx` block, so nothing here can reach a real person.
 
-### T1.7 CI/CD and hosting
+### T1.7 CI/CD and hosting ✅ (Vercel link pending)
 - `ci.yml`: install, lint, typecheck, test, `supabase db push --dry-run` on PRs.
 - `migrate.yml`: `supabase db push` on push to `main` using `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD` secrets.
 - `keepalive.yml`: weekly `curl` to `/api/cron/keepalive` with the bearer secret; implement the route.
 - Vercel project linked to the repo, env vars set, production branch `main`.
 - **Done when:** a PR shows green checks; merging deploys; `https://<app>.vercel.app/login` works; keepalive returns 200.
+- **Verified 20 Sep 2026:** `/api/cron/keepalive` returns 401 with no header and with a wrong bearer token, and 200 with the right one — `{"ok":true,"database":"awake","ms":84}`, so it really does touch the database rather than just answering. All three workflow files parse. `pnpm build` is clean.
+- **Still outstanding, and on Moeketsi:** the repository secrets, the Vercel project link, and therefore the first green run on GitHub. Both workflows that need secrets fail with a named error listing exactly which are missing, rather than an opaque CLI failure.
+- **Decision — `ci.yml` does not use `supabase db push --dry-run`.** A dry run needs the linked project's credentials, which a pull request cannot have. The `migrations` job starts a real Supabase stack instead and applies every migration to an empty database of the right Postgres version, which proves more: that the schema builds from nothing on a machine that has never seen it. It then runs both scripts from `supabase/tests/` and fails the build if any table is missing RLS enabled, forced, or a policy — so the rule that matters most cannot regress unnoticed.
+- **`vercel.json`** sets `X-Robots-Tag: noindex` and `Referrer-Policy: no-referrer` on `/p/*` and `/rsvp/*`. The signed token in those URLs is the credential, so it must not leak through a `Referer` header or land in a search index.
+- **Open, needs an answer:** the Vercel function region. BUILD-SPEC §11b wants `cpt1` when Supabase is in an African or European region, but pairing a Cape Town function with a US database would be worse than the default, so no region is set until the dev project's region is confirmed.
 
 ### T1.8 Provider applications (user, in parallel)
 - Create Resend account and verify domain (or Brevo). Create Meta app, add test recipients. Create Yoco sandbox. Record all values in Vercel and `.env.local`.

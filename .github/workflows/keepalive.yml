@@ -1,0 +1,44 @@
+name: Keepalive
+
+# A free Supabase project pauses after seven idle days and takes about a minute
+# to restore. Between the build and the demo there will be quiet weeks, and
+# "the database is asleep" is not something to discover in front of the
+# Advancement Office. This pings the database once a week.
+#
+# Repository secrets required:
+#   APP_URL       the production origin, e.g. https://cut-events.vercel.app
+#   CRON_SECRET   the same value as the CRON_SECRET environment variable on Vercel
+
+on:
+  schedule:
+    # 04:00 UTC on Mondays — 06:00 SAST, before anyone is working.
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: Wake the database
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: GET /api/cron/keepalive
+        run: |
+          if [ -z "${{ secrets.APP_URL }}" ] || [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "::error::APP_URL and CRON_SECRET must be set as repository secrets."
+            exit 1
+          fi
+
+          response=$(curl --silent --show-error --fail-with-body \
+            --max-time 60 \
+            --header "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/keepalive")
+
+          echo "$response"
+
+          # The route returns 200 with ok:false if it reached the app but not
+          # the database, which is the failure worth shouting about.
+          echo "$response" | grep -q '"ok":true' || {
+            echo "::error::The app answered but the database did not."
+            exit 1
+          }

@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint, types, tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm lint
+
+      - run: pnpm typecheck
+
+      - run: pnpm test
+
+      # The build is the check that catches what dev mode hides: a client
+      # component importing a server-only module, a page that cannot be
+      # prerendered, a bad metadata URL. It needs no real credentials — nothing
+      # is fetched at build time — but NEXT_PUBLIC_* must be present or
+      # metadataBase throws on an empty URL.
+      - name: Build
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_APP_URL: https://cut-events.vercel.app
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_placeholder
+
+  migrations:
+    name: Migrations apply from empty
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # `supabase db push --dry-run` needs the linked project's credentials,
+      # which a pull request from a fork cannot have. Starting the local stack
+      # instead proves the stronger thing: that every migration applies to an
+      # empty database of the right Postgres version, in order, on a machine
+      # that has never seen this schema.
+      - name: Start Supabase and apply every migration
+        # Studio, imgproxy, the edge runtime and the log pipeline are not needed
+        # to prove the schema applies, and they dominate the start time.
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector
+
+      - name: Schema behaviour
+        run: |
+          docker exec -i supabase_db_cut-events psql -U postgres -d postgres -q \
+            < supabase/tests/01-schema-behaviour.sql
+
+      - name: RLS boundaries
+        run: |
+          docker exec -i supabase_db_cut-events psql -U postgres -d postgres -q \
+            < supabase/tests/00-fixture.sql
+          docker exec -i supabase_db_cut-events psql -U postgres -d postgres -q -P pager=off \
+            < supabase/tests/02-rls-boundaries.sql
+
+      - name: Every table has RLS enabled, forced, and at least one policy
+        run: |
+          docker exec -i supabase_db_cut-events psql -U postgres -d postgres -t -A -v ON_ERROR_STOP=1 <<'SQL'
+          do $$
+          declare bad text;
+          begin
+            select string_agg(c.relname, ', ') into bad
+              from pg_class c join pg_namespace n on n.oid = c.relnamespace
+             where n.nspname = 'public' and c.relkind = 'r'
+               and (not c.relrowsecurity
+                    or not c.relforcerowsecurity
+                    or not exists (select 1 from pg_policy p where p.polrelid = c.oid));
+            if bad is not null then
+              raise exception 'tables without RLS enabled, forced and a policy: %', bad;
+            end if;
+          end $$;
+          SQL
