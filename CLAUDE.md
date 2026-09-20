@@ -8,6 +8,7 @@ You are building the proof of concept for an event management platform for Centr
 3. `docs/02-DESIGN-SYSTEM.md` — brand tokens, typography, logo rules, per-surface layouts, copy rules.
 4. `docs/03-TASKS.md` — the week-by-week task list with acceptance criteria. Work through it top to bottom.
 5. `docs/04-DEMO-SCRIPT.md` — what the finished POC must be able to do in 15 minutes.
+6. `docs/06-IMPLEMENTATION-PLAN-WEEKS-3-4.md` — what already exists for Weeks 3–4 and the file-by-file plan for each remaining task. Read before T3.1.
 
 If the spec and the plan disagree, the spec wins for technical matters and the plan wins for scope. If something is genuinely undecided, pick the default the spec names and note the decision in the PR description.
 

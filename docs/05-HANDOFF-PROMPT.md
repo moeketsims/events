@@ -43,10 +43,12 @@ Then, without waiting, build everything that does not depend on those answers: s
 ## Definition of done
 Stage A is complete when everything in the "Definition of done for Stage A" section at the bottom of docs/03-TASKS.md is true, the demo in docs/04-DEMO-SCRIPT.md has run clean twice on real phones and a real external display, and the pre-demo checklist has been filled in.
 
-## Where things stand (20 September 2026, evening)
-Week 1 (T1.1–T1.7) is done and verified in the browser. The design has since been rebuilt and is binding: read docs/02-DESIGN-SYSTEM.md §2.4, §2.5 and §5.1 before touching any page, and reuse the components in components/brand and components/staff. Resume at T2.1 (contacts import) and work through Week 2. The dashboard already links to /scan, /events/[id], /events/[id]/broadcasts and /events/[id]/auction/console; build those routes rather than removing the links. Never run `next build` while the dev server is up (see CLAUDE.md).
+## Where things stand (20 September 2026, night)
+Weeks 1 and 2 (T1.1–T2.7) are done, verified in the browser against the local Docker Supabase stack, and pushed; CI is green. A polish pass followed Moeketsi's review. The design is binding: read docs/02-DESIGN-SYSTEM.md §2.4, §2.5 and §5.1 before touching any page, and reuse the components in components/brand and components/staff.
 
-Begin with the prerequisites message, then T2.1.
+Read docs/06-IMPLEMENTATION-PLAN-WEEKS-3-4.md before starting: it inventories what already exists (every auction database function, the messaging layer, realtime types, feature flags in lib/features.ts) so you build on it rather than beside it, and it lays out each remaining task file by file with its local "Done when" checks. Resume at T3.1 (broadcasts). Unbuilt surfaces are gated by lib/features.ts; flip each flag in the commit that lands its route. Never run `next build` while the dev server is up (see CLAUDE.md).
+
+Begin with the prerequisites message, then T3.1.
 ```
 
 ---
