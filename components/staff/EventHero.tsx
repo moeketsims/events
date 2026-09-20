@@ -3,6 +3,7 @@ import { ArrowRight, CalendarDays, Gavel, MapPin, QrCode, Radio } from 'lucide-r
 import { Atmosphere } from '@/components/brand/Atmosphere';
 import { Button } from '@/components/ui/button';
 import { formatEventDate } from '@/lib/dates';
+import { isBuilt } from '@/lib/features';
 import { formatZAR } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import { StatusPill } from './StaffShell';
@@ -77,7 +78,9 @@ export function EventHero({
 
           {raised !== null ? (
             <div className="mt-7">
-              <p className="text-[0.6875rem] font-bold tracking-[0.16em] text-white/55 uppercase">Raised so far</p>
+              <p className="text-[0.6875rem] font-bold tracking-[0.16em] text-white/55 uppercase">
+                Raised so far
+              </p>
               <p className="numeral text-gold-metallic mt-1 text-[3rem]">{formatZAR(raised)}</p>
             </div>
           ) : null}
@@ -88,21 +91,21 @@ export function EventHero({
                 <QrCode className="size-4" aria-hidden /> Open the scanner
               </Link>
             </Button>
-            {canOrganise ? (
-              <>
-                <Button asChild variant="onDark" size="lg" className="h-11 px-5 text-[0.9375rem]">
-                  <Link href={`/events/${event.id}/broadcasts`}>
-                    <Radio className="size-4" aria-hidden /> Broadcast
-                  </Link>
-                </Button>
-                {event.auction_enabled ? (
-                  <Button asChild variant="onDark" size="lg" className="h-11 px-5 text-[0.9375rem]">
-                    <Link href={`/events/${event.id}/auction/console`}>
-                      <Gavel className="size-4" aria-hidden /> Auction console
-                    </Link>
-                  </Button>
-                ) : null}
-              </>
+            {/* Desks that are not built yet are listed on the desk below with a
+                "Coming" mark; a button here that led to a 404 would read as a bug. */}
+            {canOrganise && isBuilt('broadcasts') ? (
+              <Button asChild variant="onDark" size="lg" className="h-11 px-5 text-[0.9375rem]">
+                <Link href={`/events/${event.id}/broadcasts`}>
+                  <Radio className="size-4" aria-hidden /> Broadcast
+                </Link>
+              </Button>
+            ) : null}
+            {canOrganise && event.auction_enabled && isBuilt('console') ? (
+              <Button asChild variant="onDark" size="lg" className="h-11 px-5 text-[0.9375rem]">
+                <Link href={`/events/${event.id}/auction/console`}>
+                  <Gavel className="size-4" aria-hidden /> Auction console
+                </Link>
+              </Button>
             ) : null}
           </div>
         </div>
@@ -111,7 +114,9 @@ export function EventHero({
         <div className="flex flex-col justify-between gap-6">
           <div>
             <div className="flex items-baseline justify-between">
-              <p className="text-[0.6875rem] font-bold tracking-[0.16em] text-white/60 uppercase">The room</p>
+              <p className="text-[0.6875rem] font-bold tracking-[0.16em] text-white/60 uppercase">
+                The room
+              </p>
               <p className="text-sm text-white/60">
                 <span className="text-gold-500 font-semibold">{counts.checkedIn}</span> arrived ·{' '}
                 {toCome} to come
@@ -125,12 +130,20 @@ export function EventHero({
             <Figure
               label="Accepted"
               value={counts.accepted}
-              hint={counts.invited ? `${Math.round((counts.accepted / counts.invited) * 100)}%` : undefined}
+              hint={
+                counts.invited
+                  ? `${Math.round((counts.accepted / counts.invited) * 100)}%`
+                  : undefined
+              }
             />
             <Figure
               label="Checked in"
               value={counts.checkedIn}
-              hint={counts.attendees ? `${Math.round((counts.checkedIn / counts.attendees) * 100)}%` : undefined}
+              hint={
+                counts.attendees
+                  ? `${Math.round((counts.checkedIn / counts.attendees) * 100)}%`
+                  : undefined
+              }
               gold
             />
           </div>
@@ -141,7 +154,10 @@ export function EventHero({
               className="group inline-flex items-center gap-2 self-start text-sm font-semibold text-white/85 transition-colors hover:text-white"
             >
               Event overview
-              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
+              <ArrowRight
+                className="size-4 transition-transform group-hover:translate-x-0.5"
+                aria-hidden
+              />
             </Link>
           ) : null}
         </div>
@@ -151,7 +167,15 @@ export function EventHero({
 }
 
 /** Every expected guest is a seat; arrived seats are lit gold. Capped at 160. */
-function SeatMap({ total, taken, className }: { total: number; taken: number; className?: string }) {
+function SeatMap({
+  total,
+  taken,
+  className,
+}: {
+  total: number;
+  taken: number;
+  className?: string;
+}) {
   const max = 160;
   const shown = Math.max(1, Math.min(total, max));
   const scale = total > max ? total / max : 1;
@@ -163,19 +187,35 @@ function SeatMap({ total, taken, className }: { total: number; taken: number; cl
           <span
             key={i}
             className={cn('seat', i < filled && 'seat-taken')}
-            style={i < filled ? { animation: `fade-in 0.4s ease-out both`, animationDelay: `${i * 18}ms` } : undefined}
+            style={
+              i < filled
+                ? { animation: `fade-in 0.4s ease-out both`, animationDelay: `${i * 18}ms` }
+                : undefined
+            }
           />
         ))}
       </div>
       {total === 0 ? <p className="mt-2 text-sm text-white/55">No guests expected yet.</p> : null}
       {total > max ? (
-        <p className="mt-2 text-xs text-white/45">Each seat stands for {Math.ceil(scale)} guests.</p>
+        <p className="mt-2 text-xs text-white/45">
+          Each seat stands for {Math.ceil(scale)} guests.
+        </p>
       ) : null}
     </div>
   );
 }
 
-function Figure({ label, value, hint, gold = false }: { label: string; value: number; hint?: string; gold?: boolean }) {
+function Figure({
+  label,
+  value,
+  hint,
+  gold = false,
+}: {
+  label: string;
+  value: number;
+  hint?: string;
+  gold?: boolean;
+}) {
   return (
     <div>
       <p className="text-[0.625rem] font-bold tracking-[0.14em] text-white/55 uppercase">{label}</p>

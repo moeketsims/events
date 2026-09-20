@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { ArrowRight, Plus } from 'lucide-react';
 import { PageHeader, SectionHeading, StaffShell } from '@/components/staff/StaffShell';
 import { Arc, Ledger, LedgerFigure, SeatRow, StatusLegend } from '@/components/staff/Ledger';
-import { Desk } from '@/components/staff/Desk';
+import { Desk, type DeskItem } from '@/components/staff/Desk';
+import { isBuilt } from '@/lib/features';
 import { EventHero } from '@/components/staff/EventHero';
 import { Ticket } from '@/components/staff/Ticket';
 import { Atmosphere } from '@/components/brand/Atmosphere';
@@ -63,17 +64,26 @@ export default async function DashboardPage() {
   const canOrganise = hasRole(profile, ['organiser']);
   const firstName = profile.fullName?.split(' ')[0] ?? 'there';
 
-  const desk = [
-    { href: '/scan', title: 'Open the scanner', description: 'Scan passes, search by name, register a walk-in.' },
+  const desk: DeskItem[] = [
+    {
+      href: '/scan',
+      title: 'Open the scanner',
+      description: 'Scan passes, search by name, register a walk-in.',
+    },
     ...(canOrganise
       ? [
-          { href: '/contacts', title: 'Guest list', description: 'Import contacts, search, tag, add to an event.' },
+          {
+            href: '/contacts',
+            title: 'Guest list',
+            description: 'Import contacts, search, tag, add to an event.',
+          },
           ...(featured
             ? [
                 {
                   href: `/events/${featured.id}/broadcasts`,
                   title: 'Broadcast desk',
                   description: 'Reach everyone who has arrived, in-app and on WhatsApp.',
+                  soon: isBuilt('broadcasts') ? undefined : 'Coming',
                 },
               ]
             : []),
@@ -82,7 +92,9 @@ export default async function DashboardPage() {
                 {
                   href: `/events/${featured.id}/auction/console`,
                   title: 'Auction console',
-                  description: 'Open and close lots, reveal a bidder, void a bid, switch the screen.',
+                  description:
+                    'Open and close lots, reveal a bidder, void a bid, switch the screen.',
+                  soon: isBuilt('console') ? undefined : 'Coming',
                 },
               ]
             : []),
@@ -210,7 +222,10 @@ async function featuredCounts(
   eventId: string,
 ): Promise<{ invited: number; accepted: number; attendees: number; checkedIn: number }> {
   const [invited, accepted, attendees, checkedIn] = await Promise.all([
-    supabase.from('invitations').select('id', { count: 'exact', head: true }).eq('event_id', eventId),
+    supabase
+      .from('invitations')
+      .select('id', { count: 'exact', head: true })
+      .eq('event_id', eventId),
     supabase
       .from('invitations')
       .select('id', { count: 'exact', head: true })
@@ -233,7 +248,11 @@ async function featuredCounts(
 
 /** Total raised for the event's auction, or null when there is no auction. */
 async function raisedFor(supabase: Client, eventId: string): Promise<number | null> {
-  const { data: auction } = await supabase.from('auctions').select('id').eq('event_id', eventId).maybeSingle();
+  const { data: auction } = await supabase
+    .from('auctions')
+    .select('id')
+    .eq('event_id', eventId)
+    .maybeSingle();
   if (!auction) return null;
   const { data } = await supabase
     .from('auction_totals')
@@ -245,7 +264,11 @@ async function raisedFor(supabase: Client, eventId: string): Promise<number | nu
 
 function daypart(): string {
   const hour = Number(
-    new Intl.DateTimeFormat('en-ZA', { timeZone: TIME_ZONE, hour: 'numeric', hour12: false }).format(new Date()),
+    new Intl.DateTimeFormat('en-ZA', {
+      timeZone: TIME_ZONE,
+      hour: 'numeric',
+      hour12: false,
+    }).format(new Date()),
   );
   if (hour < 12) return 'morning';
   if (hour < 17) return 'afternoon';
@@ -277,4 +300,3 @@ function EmptyHero({ canCreate }: { canCreate: boolean }) {
     </section>
   );
 }
-

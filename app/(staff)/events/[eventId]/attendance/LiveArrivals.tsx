@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { LedgerFigure } from '@/components/staff/Ledger';
 import { createClient } from '@/lib/supabase/client';
 import { POLL_INTERVAL_MS, eventTopic, realtimeEnabled, type CheckinPayload } from '@/lib/realtime';
 
@@ -96,34 +97,22 @@ export function LiveArrivals({
   const percent = expected ? Math.round((count / expected) * 100) : 0;
 
   return (
-    <div className="flex items-start justify-between gap-4">
-      <div className="min-w-0">
-        <p className="label-caps text-ink-500 flex items-center gap-2">
-          Arrived
-          <span
-            title={connected ? 'Live' : 'Reconnecting'}
-            className={
-              connected
-                ? 'live-dot'
-                : 'bg-ink-300 inline-block size-2 shrink-0 rounded-full align-middle'
-            }
-          />
-        </p>
-        <p
+    <LedgerFigure
+      label="Arrived"
+      labelAdornment={
+        <span
+          title={connected ? 'Live' : 'Reconnecting'}
           className={
-            'numeral mt-3 flex items-baseline gap-1.5 text-[3.25rem] whitespace-nowrap transition-colors duration-500 ' +
-            (flash ? 'text-gold-600' : 'text-cut-900')
+            connected
+              ? 'live-dot'
+              : 'bg-ink-300 inline-block size-2 shrink-0 rounded-full align-middle'
           }
-        >
-          <span>{count}</span>
-          <span className="text-ink-500 text-[1.125rem] font-semibold tracking-normal">
-            / {expected}
-          </span>
-        </p>
-        <p className="text-ink-500 mt-2 text-sm">
-          {connected ? `${percent}% of those expected` : 'Reconnecting to the door…'}
-        </p>
-      </div>
-    </div>
+        />
+      }
+      value={count}
+      unit={`/ ${expected}`}
+      note={connected ? `${percent}% of those expected` : 'Reconnecting to the door…'}
+      tone={flash ? 'gold' : 'navy'}
+    />
   );
 }

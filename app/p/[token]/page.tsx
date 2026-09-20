@@ -5,6 +5,7 @@ import { Atmosphere } from '@/components/brand/Atmosphere';
 import { Logo } from '@/components/brand/Logo';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyTokenOfKind } from '@/lib/auth/pass';
+import { isBuilt } from '@/lib/features';
 import { passQrSvg, passUrl } from '@/lib/qr';
 import { formatEventDate, formatTime, formatBidderNumber } from '@/lib/dates';
 
@@ -156,7 +157,13 @@ export default async function PassPage({ params }: { params: Promise<{ token: st
         {/* Bidding */}
         {event.auction_enabled ? (
           <section className="mt-5">
-            {checkedIn ? (
+            {checkedIn && !isBuilt('bidding') ? (
+              <p className="glass-panel rounded-2xl p-5 text-center text-sm leading-relaxed text-white/70">
+                <span className="mb-1 block font-semibold text-white">Silent auction tonight</span>
+                You are checked in, {firstName}. Bidding opens from this pass when the lots are
+                announced.
+              </p>
+            ) : checkedIn ? (
               <Link
                 href={`/p/${token}/auction`}
                 className="bg-gold-500 text-cut-950 hover:bg-gold-600 flex h-14 w-full items-center justify-center gap-2 rounded-xl text-base font-semibold shadow-[0_10px_30px_-12px_rgba(251,185,39,0.8)] transition-colors"

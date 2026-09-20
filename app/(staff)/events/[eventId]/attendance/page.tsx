@@ -122,7 +122,7 @@ export default async function AttendancePage({
         }
       />
 
-      <Ledger className="lg:grid-cols-4">
+      <Ledger>
         <LiveArrivals eventId={eventId} initial={arrived.length} expected={attendees.length} />
         <LedgerFigure
           label="Expected"

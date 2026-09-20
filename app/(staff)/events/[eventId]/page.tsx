@@ -4,9 +4,10 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft, CalendarClock, MapPin, Users } from 'lucide-react';
 import { SectionHeading, StaffShell, StatusPill } from '@/components/staff/StaffShell';
 import { Arc, Ledger, LedgerFigure, SeatRow } from '@/components/staff/Ledger';
-import { Desk } from '@/components/staff/Desk';
+import { Desk, type DeskItem } from '@/components/staff/Desk';
 import { EventHero } from '@/components/staff/EventHero';
 import { hasRole, requireStaff } from '@/lib/auth/staff';
+import { isBuilt } from '@/lib/features';
 import { createClient } from '@/lib/supabase/server';
 import { formatEventDate } from '@/lib/dates';
 import type { Database } from '@/lib/db/types';
@@ -45,7 +46,9 @@ export default async function EventOverviewPage({
   // Door staff may read the event but none of the organiser pages, so they get
   // the one thing they are here to do. StaffShell's rule holds everywhere: a
   // link that ends in a 403 is worse than no link.
-  const desk = !canOrganise
+  const soon = (feature: Parameters<typeof isBuilt>[0]) =>
+    isBuilt(feature) ? undefined : 'Coming';
+  const desk: DeskItem[] = !canOrganise
     ? [
         {
           href: '/scan',
@@ -73,6 +76,7 @@ export default async function EventOverviewPage({
           href: `/events/${event.id}/broadcasts`,
           title: 'Broadcast desk',
           description: 'Reach everyone who has arrived, in-app and on WhatsApp.',
+          soon: soon('broadcasts'),
         },
         ...(event.auction_enabled
           ? [
@@ -80,11 +84,13 @@ export default async function EventOverviewPage({
                 href: `/events/${event.id}/auction`,
                 title: 'Auction and lots',
                 description: 'Settings, the lot catalogue and the projection link.',
+                soon: soon('auction'),
               },
               {
                 href: `/events/${event.id}/auction/console`,
                 title: 'Auction console',
                 description: 'Open and close lots, reveal a bidder, void a bid.',
+                soon: soon('console'),
               },
             ]
           : []),
@@ -92,6 +98,7 @@ export default async function EventOverviewPage({
           href: `/events/${event.id}/results`,
           title: 'Results and settlement',
           description: 'Winners, amounts, what has been paid.',
+          soon: soon('results'),
         },
       ];
 
@@ -115,7 +122,7 @@ export default async function EventOverviewPage({
         showOverviewLink={false}
       />
 
-      <Ledger className="mt-10 lg:grid-cols-5">
+      <Ledger className="mt-10" columns={5}>
         <LedgerFigure label="Invited" value={counts.invited} note="On the guest list" />
         <LedgerFigure
           label="Accepted"
