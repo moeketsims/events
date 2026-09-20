@@ -102,7 +102,7 @@ export function StaffShell({
           <span className="font-display text-cut-900 text-sm font-semibold tracking-wide">
             Thinking Beyond
           </span>
-          <span className="mx-2 text-ink-300">·</span>
+          <span className="text-ink-300 mx-2">·</span>
           Central University of Technology, Free State
         </footer>
       </div>
@@ -204,16 +204,41 @@ export function StatTile({
   );
 }
 
-/** Status pill for event and lot states. */
+/**
+ * Status pill for event, invitation and lot states — DESIGN-SYSTEM §2.4: tints,
+ * not fills, with `live` the one exception because the room needs to see it.
+ * Colour is never the only signal; the word is always in the pill.
+ */
 const PILL: Record<string, string> = {
+  // events
   draft: 'bg-ink-100 text-ink-700',
   published: 'bg-sky-500/12 text-sky-500',
   live: 'bg-gold-500 text-cut-950',
   closed: 'bg-green-600/12 text-green-600',
   archived: 'bg-ink-100 text-ink-500',
+  // invitations
+  pending: 'bg-ink-100 text-ink-700',
+  accepted: 'bg-green-600/12 text-green-600',
+  declined: 'bg-red-700/10 text-red-700',
+  waitlisted: 'bg-gold-500/15 text-gold-600',
+  cancelled: 'bg-ink-100 text-ink-500',
+  // lots
+  upcoming: 'bg-ink-100 text-ink-700',
+  open: 'bg-gold-500 text-cut-950',
+  unsold: 'bg-ink-100 text-ink-500',
+  withdrawn: 'bg-ink-100 text-ink-500',
 };
 
-export function StatusPill({ status, className }: { status: string; className?: string }) {
+export function StatusPill({
+  status,
+  className,
+  children,
+}: {
+  status: string;
+  className?: string;
+  /** A label to show instead of the raw status word. */
+  children?: React.ReactNode;
+}) {
   return (
     <span
       className={cn(
@@ -222,8 +247,8 @@ export function StatusPill({ status, className }: { status: string; className?: 
         className,
       )}
     >
-      {status === 'live' ? <span className="live-dot bg-cut-950" /> : null}
-      {status}
+      {status === 'live' || status === 'open' ? <span className="live-dot bg-cut-950" /> : null}
+      {children ?? status}
     </span>
   );
 }

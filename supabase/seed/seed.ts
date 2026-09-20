@@ -214,13 +214,41 @@ async function seedStaff(departmentId: string): Promise<{ email: string; magicLi
 // 3. Contacts
 // ---------------------------------------------------------------------------
 
-function emailFor(first: string, last: string): string {
-  const clean = (s: string) =>
-    s
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .replace(/[^a-z]/g, '');
+/**
+ * Where the demo guests' messages actually land.
+ *
+ * Fictitious contacts are `@example.com`, which RFC 2606 reserves and nothing
+ * delivers to — the rule in CLAUDE.md that no real personal data enters the
+ * system. But a demo has to show an invitation *arriving*, and Resend's free
+ * tier with no verified domain delivers only to the address that owns the
+ * account. `DEMO_EMAIL_BASE=someone@gmail.com` therefore gives the first few
+ * guests `someone+naledi@gmail.com`: a distinct address to the database's
+ * unique index, and one inbox to put on the projector. Set `DEMO_PHONES` to
+ * the numbers registered as WhatsApp test recipients and the same guests
+ * become reachable on WhatsApp.
+ */
+const DEMO_EMAIL_BASE = process.env.DEMO_EMAIL_BASE?.trim();
+const DEMO_PHONES = (process.env.DEMO_PHONES ?? '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+/** How many of the seeded guests are wired to real addresses. */
+const DEMO_GUESTS = Math.max(DEMO_EMAIL_BASE ? 5 : 0, DEMO_PHONES.length);
+
+function clean(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z]/g, '');
+}
+
+function emailFor(first: string, last: string, index: number): string {
+  if (DEMO_EMAIL_BASE && index < DEMO_GUESTS) {
+    const [local, domain] = DEMO_EMAIL_BASE.split('@');
+    if (local && domain) return `${local}+${clean(first)}@${domain}`;
+  }
   return `${clean(first)}.${clean(last)}@example.com`;
 }
 
@@ -231,10 +259,13 @@ async function seedContacts(
     department_id: departmentId,
     first_name: c.firstName,
     last_name: c.lastName,
-    email: emailFor(c.firstName, c.lastName),
-    // The +27 82 000 00xx block. Fictitious, and never dialled by the POC.
-    phone_e164: `+27820000${String(i + 1).padStart(3, '0')}`,
-    whatsapp_opt_in: i % 3 !== 0,
+    email: emailFor(c.firstName, c.lastName, i),
+    // The +27 82 000 00xx block: fictitious, and never dialled by the POC.
+    // A number from DEMO_PHONES replaces it for the demo guests, and those
+    // guests are opted in, because a phone registered as a WhatsApp test
+    // recipient has already agreed to be messaged.
+    phone_e164: DEMO_PHONES[i] ?? `+27820000${String(i + 1).padStart(3, '0')}`,
+    whatsapp_opt_in: i < DEMO_PHONES.length || i % 3 !== 0,
     organisation: c.organisation ?? null,
     title: c.title ?? null,
     tags: c.tags,
@@ -649,6 +680,19 @@ async function main() {
       ? '  The six-digit code is caught by Mailpit at http://127.0.0.1:54524\n'
       : '  The six-digit code is emailed; custom SMTP must be configured.\n',
   );
+
+  if (DEMO_GUESTS > 0) {
+    console.log('  REAL ADDRESSES — these guests can actually be messaged\n');
+    for (const contact of contacts.slice(0, DEMO_GUESTS)) {
+      console.log(`  ${contact.firstName} ${contact.lastName}  ${contact.email}  ${contact.phone}`);
+    }
+    console.log('');
+  } else {
+    console.log(
+      '  Every guest is @example.com and +2782000000xx. Set DEMO_EMAIL_BASE and\n' +
+        '  DEMO_PHONES in .env.local to make the first few reachable for a demo.\n',
+    );
+  }
 
   console.log('  ATTENDEE PASSES — open these on the demo phones\n');
   for (const attendee of arrivals.slice(0, 2)) {
