@@ -20,6 +20,7 @@
     "e2e": "playwright test",
     "db:push": "supabase db push",
     "db:types": "supabase gen types typescript --linked > lib/db/types.ts",
+    "db:types:local": "supabase gen types typescript --local > lib/db/types.ts",
     "seed": "tsx supabase/seed/seed.ts",
     "bid-storm": "tsx scripts/bid-storm.ts",
     "smoke-providers": "tsx scripts/smoke-providers.ts",

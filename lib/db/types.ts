@@ -973,7 +973,7 @@ export type Database = {
           p_action: string
           p_actor_id: string
           p_entity: string
-          p_entity_id: string
+          p_entity_id?: string
           p_metadata?: Json
         }
         Returns: undefined

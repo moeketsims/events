@@ -112,11 +112,13 @@ Prerequisites the **user** must supply before Week 1 finishes (the agent should 
 
 **Goal:** an organiser imports contacts, creates an event, sends invitations, a guest RSVPs, receives a QR pass, and is scanned in at the door.
 
-### T2.1 Contacts
+### T2.1 Contacts ✅
 - `/contacts` list with search, tag filter, pagination (50/page).
 - CSV import dialog: paste or upload; columns `first_name,last_name,email,phone,organisation,tags,alumni_year`; preview; `importContacts` action with de-dupe by email then phone; phone normalised to E.164 (`0821234567` → `+27821234567`).
 - Unit tests for parsing and normalisation.
 - **Done when:** importing the same CSV twice reports 0 inserted on the second run; malformed rows are listed with line numbers.
+- **Verified 20 Sep 2026, in the browser against the local stack.** A five-row CSV (two new people, one already on the list, one with no first name, one with `banana` in the phone column) previewed as "3 rows ready, 2 to fix" with `Line 5 — first_name is blank` and `Line 6 — "banana" is not a phone number we can read`, then imported as **Added 2 · Updated 1 · Unchanged 0**. The identical CSV imported again reported **Added 0 · Updated 0 · Unchanged 3** with the same two line errors, which is the "0 inserted on the second run" check. Search matched on name, email and organisation; a search containing `'),or(` came back as 0 results rather than a PostgREST syntax error; the tag chips filtered and composed with the search; pagination (temporarily at 10/page to exercise it) showed `21–30 of 40`, kept the filter across pages, disabled Next on the last page, and a bookmarked `?page=9` redirected to the last real page. 18 new unit tests cover the CSV reader and phone normalisation. No console errors.
+- **Decisions taken where the task was silent:** a row needs an email address *or* a phone number, because a row with neither cannot be de-duplicated and would be created again on every import. A contact that already exists is **enriched, not replaced** — a blank cell never erases a stored value and tags are merged — since an organiser's second spreadsheet is usually partial. Tags are lowercased on the way in so the filter chips do not split `Donor` from `donor`. A row whose email matches one contact and whose phone matches another is refused with an explanation rather than silently merging two donor records. The import writes an `audit_log` row (`contacts.imported`), which needed migration `0009` to let `log_audit` take a null `entity_id`: a bulk act has no single row to point at.
 
 ### T2.2 Events CRUD
 - `/events` list grouped by status; `/events/new` form; `/events/[id]` overview with funnel tiles (invited, accepted, declined, pending, checked in) and quick links; edit dialog; banner upload to `event-banners`.
