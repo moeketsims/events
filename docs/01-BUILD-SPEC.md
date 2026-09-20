@@ -428,9 +428,11 @@ create table audit_log (
 
 ### 4.3 Views
 
+Both views are created `with (security_invoker = on)`. A Postgres view defaults to running with its owner's privileges, which would silently bypass RLS on `lots`, `bids` and `attendees` and expose the whole board to any authenticated user of any department.
+
 ```sql
 -- current high bid per lot, anonymised
-create view lot_state as
+create view lot_state with (security_invoker = on) as
 select
   l.id as lot_id,
   l.auction_id,
@@ -451,7 +453,7 @@ left join lateral (
 left join attendees a on a.id = b.attendee_id;
 
 -- totals for the projection footer
-create view auction_totals as
+create view auction_totals with (security_invoker = on) as
 select auction_id, coalesce(sum(high_bid),0) as total_raised, count(*) filter (where high_bid is not null) as lots_with_bids
 from lot_state group by auction_id;
 ```
@@ -513,10 +515,11 @@ language sql stable as $$
 $$;
 ```
 
-**Check-in** (called from `/api/checkin` after the server has verified the pass token signature):
+**Check-in** (called from `/api/checkin` after the server has verified the pass token signature). `p_event_id` lets the function return the `wrong_event` result that the §7.2 route contract promises, without a second round trip; passing null skips the check:
 
 ```sql
-create or replace function check_in_attendee(p_attendee_id uuid, p_staff_id uuid)
+create or replace function check_in_attendee(p_attendee_id uuid, p_staff_id uuid,
+                                             p_event_id uuid default null)
 returns table (result text, display_name text, bidder_number int, checked_in_at timestamptz)
 language plpgsql security definer set search_path = public as $$
 declare
@@ -537,7 +540,11 @@ begin
   if v_event.auction_enabled and v_att.bidder_number is null then
     -- serialise per event so numbers are unique and sequential
     perform pg_advisory_xact_lock(hashtext(v_att.event_id::text));
-    select coalesce(max(bidder_number), 0) + 1 into v_next from attendees where event_id = v_att.event_id;
+    -- Alias the table. result, display_name, bidder_number and checked_in_at
+    -- are OUT parameters of this function, so a bare reference to one of them
+    -- is ambiguous between the variable and the column and Postgres refuses
+    -- to run the statement.
+    select coalesce(max(a.bidder_number), 0) + 1 into v_next from attendees a where a.event_id = v_att.event_id;
     v_att.bidder_number := v_next;
   end if;
 
@@ -548,7 +555,7 @@ begin
 
   perform realtime.send(
     jsonb_build_object('event_id', v_att.event_id, 'checked_in_count',
-      (select count(*) from attendees where event_id = v_att.event_id and checked_in_at is not null)),
+      (select count(*) from attendees a where a.event_id = v_att.event_id and a.checked_in_at is not null)),
     'checkin', 'event:' || v_att.event_id, false);
 
   return query select 'checked_in', v_att.display_name, v_att.bidder_number, v_att.checked_in_at;
@@ -635,10 +642,13 @@ create or replace function close_due_lots() returns int
 language plpgsql security definer set search_path = public as $$
 declare v_count int := 0; r record;
 begin
-  for r in select l.id, ls.high_bid, ls.high_bidder_number, l.reserve, l.auction_id
-             from lots l join lot_state ls on ls.lot_id = l.id
+  -- Lock the lots rows alone and look the high bid up per lot inside the loop.
+  -- FOR UPDATE through lot_state, which has a lateral join and an outer join,
+  -- is fragile; 0004 does it this way.
+  for r in select l.id, l.reserve
+             from lots l
             where l.status = 'open' and l.closes_at is not null and l.closes_at <= now()
-            for update of l skip locked loop
+            for update skip locked loop
     if r.high_bid is null or (r.reserve is not null and r.high_bid < r.reserve) then
       perform set_lot_status(r.id, 'unsold');
     else
@@ -655,6 +665,8 @@ end $$;
 ```
 
 `void_bid(p_bid_id, p_reason, p_staff_id)` sets `voided_at`, writes an audit row, and re-broadcasts the lot's new state on `auction:{id}` as event `bid_voided`. Operator only.
+
+**Execute privileges.** Supabase grants `EXECUTE` on every new function in `public` to `anon` and `authenticated` by default. `place_bid`, `check_in_attendee`, `void_bid`, `set_lot_status`, `set_display_mode`, `close_due_lots` and `log_audit` are all `SECURITY DEFINER`, so leaving that default in place would let anyone holding the publishable key call them straight from a browser and bypass every server-side check — including the one bid path. `0004` revokes them from `public`, `anon` and `authenticated` and grants each to `service_role` alone. The helpers the RLS policies call (`auth_role`, `auth_department`, `is_platform_admin`, `is_operator`, `next_min_bid`, `bid_step`) keep their grant to `authenticated`, because a policy evaluates them on every row.
 
 ### 4.5 Row Level Security (`0005`)
 
