@@ -109,6 +109,22 @@ The first build was a default component kit with brand colours dropped in. This 
 
 **What the implementing agent must carry forward** into the pages not yet built (event overview, guests, invitations, attendance, broadcasts, auction editor, console, results, scanner, RSVP, pass, bidding, projection): the same tokens and components, one dramatic element per page, eyebrow-led openers, hairline cards on canvas, gold only where listed. The projection keeps its own rules in §5.4 but inherits the gradient, watermark and glass-tile treatment from this section.
 
+### 2.5 The cinematic layer (public and attendee surfaces)
+
+Section 2.4 makes the console calm. The surfaces a donor or guest sees have to do more: they must feel like the gala itself, and they must say "give" before they say anything else. The rule is **the product demonstrates itself**: the money moving tonight is on the page before anyone signs in.
+
+**Backdrop — `components/brand/Atmosphere.tsx`.** Pure CSS, server-rendered, zero JavaScript. Layers back to front: navy base `#001738 → #000D24`; two drifting aurora blobs (CUT blue top-left, gold bottom-right, 70 px blur, 26–34 s alternate drift); the CUT watermark symbol at 5 % with the logotype masked out; 28 rising gold light particles on a deterministic field; SVG film grain at 35 % overlay; a radial vignette. An optional photograph can sit under the aurora at 38 % opacity. `intensity` scales the blobs, watermark and particles (1 on hero pages, 0.6 on the pass page). Reduced motion freezes everything.
+
+**Type on the cinematic layer.** Headline `clamp(3.5rem, 6.2–7.5vw, 6.75–7.25rem)`, Barlow Condensed 700, line-height 0.92, one line white and one line `.text-gold-metallic` (a warm gold gradient clipped to the text with a slow 9 s sheen). Eyebrows use `.eyebrow-on-dark` at 0.18 em tracking. Body copy `white/70` at 18–20 px. Copy is short, declarative, and about giving: the house line is **"The gift comes first. The gala follows."**
+
+**Panels.** `.glass-panel`: `white/5` fill, `white/12` border, inset top highlight, 18 px blur, deep drop shadow, 24 px radius. Forms on the layer use `.input-dark` (translucent field, gold focus ring) and the `gold` button variant. Rules between sections are `.hairline-gold` (1 px, fading at both ends).
+
+**Live strip — `components/brand/LiveStrip.tsx`.** The featured event (live first, else next published) with three counting figures: raised so far in metallic gold ZAR, guests arrived, lots open. Beneath it a `Marquee` ticker of the last anonymised bids: "◆ Lot 3 · title · R5 500 · Bidder 017". Figures animate on entry with `CountUp` (mode `zar` or `int`; never pass a function across the client boundary). Data comes from `lib/public/showcase.ts`, which reads only projection-safe columns through the admin client and returns empty on any failure so a public page can never 500 because the database is asleep.
+
+**Motion.** `.reveal` staggers hero copy in 0.1 s steps (0.9 s fade-up). Marquee 38–48 s per loop, paused on hover. Aurora drift and particle rise are ambient and slow. Nothing bounces, nothing spins.
+
+**Where it applies.** `/` and `/login` now; the RSVP page header, the pass page header, the auction pages and the projection when they are built. The projection uses the same Atmosphere at intensity 1 with the board rendered as glass tiles and metallic gold amounts, exactly as the landing page's "The board" section previews it.
+
 ### 2.3 Semantic use
 
 | Meaning | Token | Example |

@@ -311,6 +311,146 @@
     line-height: 1;
   }
 
+  /* ---- Cinematic layer (DESIGN-SYSTEM §2.5): public and attendee surfaces ---- */
+
+  /* Metallic gold type. Background-clip text over a warm gradient. */
+  .text-gold-metallic {
+    background-image: linear-gradient(
+      100deg,
+      #f6c453 0%,
+      #fbb927 30%,
+      #ffe08a 50%,
+      #e0a31e 72%,
+      #fbb927 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    background-size: 200% 100%;
+    animation: gold-sheen 9s ease-in-out infinite;
+  }
+  @keyframes gold-sheen {
+    0%,
+    100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  /* Glass panel on the cinematic background. */
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 30px 80px -30px rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(18px) saturate(1.2);
+    -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  }
+
+  /* Gold hairline: 1 px, fading both ends. */
+  .hairline-gold {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(251, 185, 39, 0.7), transparent);
+  }
+
+  /* Dark inputs on the cinematic background. */
+  .input-dark {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #fff;
+    transition:
+      border-color 0.2s,
+      background 0.2s,
+      box-shadow 0.2s;
+  }
+  .input-dark::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+  }
+  .input-dark:focus {
+    outline: none;
+    border-color: rgba(251, 185, 39, 0.8);
+    background: rgba(255, 255, 255, 0.09);
+    box-shadow: 0 0 0 4px rgba(251, 185, 39, 0.18);
+  }
+
+  /* Marquee track: two copies of the content slide left forever. */
+  .marquee {
+    overflow: hidden;
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    gap: 3rem;
+    animation: marquee 40s linear infinite;
+  }
+  .marquee:hover .marquee-track {
+    animation-play-state: paused;
+  }
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* Aurora blobs drift slowly behind everything. */
+  .aurora {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(70px);
+    opacity: 0.55;
+    will-change: transform;
+    animation: aurora-drift 26s ease-in-out infinite alternate;
+  }
+  @keyframes aurora-drift {
+    from {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    to {
+      transform: translate3d(6%, -8%, 0) scale(1.15);
+    }
+  }
+
+  /* Ambient slow rise for the light particles. */
+  @keyframes rise {
+    from {
+      transform: translateY(0) translateX(0);
+      opacity: 0;
+    }
+    10% {
+      opacity: var(--p-opacity, 0.6);
+    }
+    90% {
+      opacity: var(--p-opacity, 0.6);
+    }
+    to {
+      transform: translateY(-110vh) translateX(var(--p-drift, 20px));
+      opacity: 0;
+    }
+  }
+  .particle {
+    position: absolute;
+    bottom: -2vh;
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgba(255, 224, 138, 1) 0%, rgba(251, 185, 39, 0.6) 40%, rgba(251, 185, 39, 0) 70%);
+    animation: rise var(--p-duration, 18s) linear infinite;
+    animation-delay: var(--p-delay, 0s);
+  }
+
+  /* Staggered reveals for hero copy. */
+  .reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    animation: fade-up 0.9s var(--ease-out-soft) forwards;
+    animation-delay: var(--reveal-delay, 0s);
+  }
+
   /* Gold rule under an opener, fading to the right. */
   .gold-rule {
     height: 3px;

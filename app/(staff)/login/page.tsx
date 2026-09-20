@@ -1,6 +1,11 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { BrandPanel } from '@/components/brand/BrandPanel';
+import { Atmosphere } from '@/components/brand/Atmosphere';
+import { LiveStrip } from '@/components/brand/LiveStrip';
+import { Logo } from '@/components/brand/Logo';
+import { Marquee } from '@/components/brand/Marquee';
 import { getStaffProfile } from '@/lib/auth/staff';
+import { getShowcase } from '@/lib/public/showcase';
 import { LoginForm } from './LoginForm';
 
 export const metadata = { title: 'Sign in' };
@@ -16,6 +21,14 @@ const LINK_ERRORS: Record<string, string> = {
     'That sign-in link was incomplete — it may have been cut short by an email client. Ask for a code below instead.',
 };
 
+const PILLARS = [
+  'Invitations by email and WhatsApp',
+  'QR passes at the door',
+  'Broadcasts to the room',
+  'Silent auctions on the screen',
+  'Winners paid before they leave',
+];
+
 export default async function LoginPage({
   searchParams,
 }: {
@@ -24,55 +37,109 @@ export default async function LoginPage({
   const profile = await getStaffProfile();
   if (profile) redirect('/dashboard');
 
-  const { next, error } = await searchParams;
+  const [{ next, error }, showcase] = await Promise.all([searchParams, getShowcase()]);
   // Only same-origin paths, so ?next= cannot be used as an open redirect.
   const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : undefined;
   // Looked up rather than rendered, so the URL cannot inject arbitrary text.
   const linkError = error ? LINK_ERRORS[error] : undefined;
 
   return (
-    <div className="min-h-dvh bg-white lg:grid lg:grid-cols-[1.1fr_1fr]">
-      <BrandPanel
-        eyebrow="CUT Events"
-        headline={
-          <>
-            Every CUT event.
-            <br />
-            One <span className="text-gold-500">platform</span>.
-          </>
-        }
-        copy="Invitations and RSVP, QR passes at the door, live broadcasts to the room, and silent auctions on the screen. Built for Institutional Advancement and every department."
-        points={[
-          'Send invitations by email and WhatsApp, track every reply.',
-          'Replace the paper register with a scan at the door.',
-          'Reach only the people who have actually arrived.',
-          'Run the auction on phones and project it live, without names.',
-        ]}
-        className="min-h-[38vh] lg:min-h-dvh"
-      />
+    <div className="relative min-h-dvh overflow-hidden text-white">
+      <Atmosphere />
 
-      <div className="animate-fade-up flex items-center justify-center px-6 py-14 sm:px-12">
-        <div className="w-full max-w-sm">
-          <p className="eyebrow">Staff sign in</p>
-          <h2 className="text-cut-900 mt-3 text-[2.25rem] leading-none font-bold">Welcome back</h2>
-          <p className="text-ink-500 mt-3 text-[0.9375rem]">
-            Use your CUT email address. We send a six-digit code; there is no password.
+      <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-[1400px] flex-col px-6 sm:px-10 lg:px-14">
+        {/* Top bar */}
+        <header className="reveal flex items-center justify-between gap-6 pt-7">
+          <Link href="/" className="shadow-plate inline-flex rounded-xl bg-white p-2.5">
+            <Logo variant="horizontal" size="sm" priority />
+          </Link>
+          <p className="hidden text-[0.6875rem] font-bold tracking-[0.18em] text-white/55 uppercase sm:block">
+            Institutional Advancement · Central University of Technology
           </p>
+        </header>
 
-          {linkError ? (
-            <p role="alert" className="mt-6 rounded-lg bg-red-700/8 p-3 text-sm text-red-700">
-              {linkError}
+        {/* Hero + form */}
+        <div className="grid flex-1 items-center gap-12 py-14 lg:grid-cols-[1.35fr_1fr] lg:gap-16 lg:py-10">
+          <section className="min-w-0">
+            <p
+              className="eyebrow eyebrow-on-dark reveal tracking-[0.18em]"
+              style={{ '--reveal-delay': '0.1s' } as React.CSSProperties}
+            >
+              Fundraising, staged
             </p>
-          ) : null}
+            <h1
+              className="font-display reveal mt-6 text-[clamp(3.5rem,7.5vw,7.25rem)] leading-[0.92] font-bold tracking-[-0.01em] text-balance"
+              style={{ '--reveal-delay': '0.2s' } as React.CSSProperties}
+            >
+              The gift comes first.
+              <br />
+              <span className="text-gold-metallic">The gala follows.</span>
+            </h1>
+            <p
+              className="reveal mt-8 max-w-xl text-[1.125rem] leading-relaxed text-white/70 sm:text-[1.25rem]"
+              style={{ '--reveal-delay': '0.32s' } as React.CSSProperties}
+            >
+              One platform for the invitations, the door, the room and the auction. Built for the
+              donors who make Central University of Technology possible, and for the team that
+              hosts them.
+            </p>
 
-          <div className="mt-8">
-            <LoginForm next={safeNext} />
-          </div>
+            <div className="reveal mt-10" style={{ '--reveal-delay': '0.45s' } as React.CSSProperties}>
+              <LiveStrip data={showcase} />
+            </div>
+          </section>
 
-          <p className="text-ink-500 border-hairline mt-10 border-t pt-6 text-sm">
-            Guests never sign in. Your invitation link is your RSVP and your pass link is your entry.
-          </p>
+          <section
+            className="reveal glass-panel rounded-3xl p-7 sm:p-9"
+            style={{ '--reveal-delay': '0.35s' } as React.CSSProperties}
+            aria-labelledby="signin-title"
+          >
+            <p className="eyebrow eyebrow-on-dark">Staff sign in</p>
+            <h2 id="signin-title" className="font-display mt-4 text-[2.5rem] leading-none font-bold">
+              Welcome back
+            </h2>
+            <p className="mt-3 text-[0.9375rem] text-white/60">
+              Your CUT email address is your key. We send a code; there is no password.
+            </p>
+
+            {linkError ? (
+              <p role="alert" className="mt-6 rounded-lg border border-red-700/40 bg-red-700/15 p-3 text-sm text-red-100">
+                {linkError}
+              </p>
+            ) : null}
+
+            <div className="mt-8">
+              <LoginForm next={safeNext} />
+            </div>
+
+            <div className="hairline-gold mt-8" />
+            <p className="mt-5 text-sm text-white/50">
+              Guests never sign in. Your invitation link is your RSVP and your pass link is your
+              entry.
+            </p>
+          </section>
         </div>
+
+        {/* Foot ticker */}
+        <footer className="reveal pb-7" style={{ '--reveal-delay': '0.6s' } as React.CSSProperties}>
+          <div className="hairline-gold mb-5" />
+          <div className="flex flex-wrap items-center justify-between gap-6">
+            <Marquee speed={48} className="max-w-full flex-1">
+              {PILLARS.map((p) => (
+                <span
+                  key={p}
+                  className="inline-flex items-center gap-4 text-[0.75rem] font-semibold tracking-[0.14em] text-white/55 uppercase whitespace-nowrap"
+                >
+                  <span className="text-gold-500 text-[9px]">◆</span>
+                  {p}
+                </span>
+              ))}
+            </Marquee>
+            <span className="font-display text-gold-500 shrink-0 text-lg font-semibold tracking-wide">
+              Thinking Beyond
+            </span>
+          </div>
+        </footer>
       </div>
     </div>
   );
