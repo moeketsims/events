@@ -21,6 +21,8 @@ If the spec and the plan disagree, the spec wins for technical matters and the p
 - **Anonymity on public surfaces.** Bidder numbers only on the projection and in realtime payloads. Never a surname on a public page.
 - **One bid path.** All bids go through the `place_bid` Postgres function. No client-side or server-side shortcut.
 - Every Server Action and Route Handler validates input with zod. Every role-restricted action calls `requireStaff`.
+- **Design is settled and binding.** Read `docs/02-DESIGN-SYSTEM.md` §2.4, §2.5 and §5.1 before building any page. Public and attendee surfaces use the cinematic layer (`Atmosphere`, glass panels, metallic gold); the console uses the v3 card vocabulary (ledger, ticket, seat map, desk). No icon-chip stat boxes. No figures on public pages.
+- **Never run `next build` while `pnpm dev` is running.** Both write to `.next`; a build under a live dev server leaves it serving pages whose client chunks 404, so nothing hydrates. If that happens: stop the dev server, delete `.next`, start it again and wait for the first compile before opening a page.
 
 ## Working conventions
 - pnpm, Node 22, TypeScript strict, Next.js 15 App Router, Tailwind 4, shadcn/ui.
