@@ -502,6 +502,8 @@ export type Database = {
           description: string | null
           ends_at: string | null
           id: string
+          join_nonce: string | null
+          join_token: string | null
           rsvp_deadline: string | null
           slug: string
           starts_at: string
@@ -523,6 +525,8 @@ export type Database = {
           description?: string | null
           ends_at?: string | null
           id?: string
+          join_nonce?: string | null
+          join_token?: string | null
           rsvp_deadline?: string | null
           slug: string
           starts_at: string
@@ -544,6 +548,8 @@ export type Database = {
           description?: string | null
           ends_at?: string | null
           id?: string
+          join_nonce?: string | null
+          join_token?: string | null
           rsvp_deadline?: string | null
           slug?: string
           starts_at?: string

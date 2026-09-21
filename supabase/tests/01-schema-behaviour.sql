@@ -114,3 +114,29 @@ select display_mode, spotlight_lot_id is not null as has_spotlight
 select event_id, count(*) as n, count(distinct bidder_number) as distinct_numbers,
        min(bidder_number) as lo, max(bidder_number) as hi
   from attendees where bidder_number is not null group by event_id;
+
+\echo '=== 21. self-registration (0010): join_token is unique across events ==='
+update events
+   set join_token = 'j.AAAAAAAAAAAAAAAAAAAAAA.BBBBBBBBBBBBBBBBBBBBBB',
+       join_nonce = '66666666-6666-6666-6666-666666666666'
+ where id = '22222222-2222-2222-2222-222222222222';
+select join_token is not null as join_on, join_nonce from events where id = '22222222-2222-2222-2222-222222222222';
+do $$
+begin
+  update events set join_token = 'j.AAAAAAAAAAAAAAAAAAAAAA.BBBBBBBBBBBBBBBBBBBBBB'
+   where id = '22222222-2222-2222-2222-222222222229';
+  raise exception 'duplicate join_token was accepted';
+exception when unique_violation then
+  raise notice 'duplicate join_token rejected: %', sqlerrm;
+end $$;
+
+\echo '=== 22. self-registration: a walk-in checked in with a null staff id gets the next bidder number ==='
+insert into attendees (id, event_id, display_name, pass_token, is_walk_in)
+values ('33333333-3333-3333-3333-333333333334', '22222222-2222-2222-2222-222222222222', 'Echo E', 'p.eee.eee', true);
+select result, bidder_number,
+       bidder_number = (select max(bidder_number) from attendees
+                         where event_id = '22222222-2222-2222-2222-222222222222'
+                           and id <> '33333333-3333-3333-3333-333333333334') + 1 as is_next
+  from check_in_attendee('33333333-3333-3333-3333-333333333334', null, '22222222-2222-2222-2222-222222222222');
+select checked_in_by is null as no_staff, checked_in_at is not null as stamped, is_walk_in
+  from attendees where id = '33333333-3333-3333-3333-333333333334';
