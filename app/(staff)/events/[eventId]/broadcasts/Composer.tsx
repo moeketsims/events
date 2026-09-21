@@ -191,10 +191,9 @@ export function Composer({
           className="border-cut-700 bg-cut-50 flex flex-wrap items-center justify-between gap-4 rounded-lg border p-4"
         >
           <p className="text-ink-900 text-sm">
-            Send this to <span className="font-semibold">{chosen.guests}</span>{' '}
-            {chosen.guests === 1 ? 'guest' : 'guests'} now
-            {whatsapp ? `, ${chosen.whatsapp} of them on WhatsApp as well` : ''}? It cannot be
-            recalled.
+            {`Send this to ${chosen.guests} ${chosen.guests === 1 ? 'guest' : 'guests'} now${
+              whatsapp ? `, ${chosen.whatsapp} of them on WhatsApp as well` : ''
+            }? It cannot be recalled.`}
           </p>
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={() => setConfirming(false)}>
@@ -256,10 +255,19 @@ function Report({ report }: { report: NonNullable<SendBroadcastState['report']> 
         ))}
       </div>
 
+      {report.whatsapp.notConfigured > 0 ? (
+        <p className="mt-3 text-xs text-red-700">
+          {`WhatsApp is not configured yet, so ${report.whatsapp.notConfigured} ${
+            report.whatsapp.notConfigured === 1 ? 'delivery was' : 'deliveries were'
+          } recorded as failed. Those guests were reached on the pass.`}
+        </p>
+      ) : null}
+
       {report.whatsapp.skipped > 0 ? (
         <p className="text-ink-500 mt-3 text-xs">
-          {report.whatsapp.skipped} {report.whatsapp.skipped === 1 ? 'guest has' : 'guests have'} no
-          WhatsApp number or opt-in, so they were reached on the pass only.
+          {`${report.whatsapp.skipped} ${
+            report.whatsapp.skipped === 1 ? 'guest has' : 'guests have'
+          } no WhatsApp number or opt-in, so they were reached on the pass only.`}
         </p>
       ) : null}
 
@@ -268,7 +276,7 @@ function Report({ report }: { report: NonNullable<SendBroadcastState['report']> 
           {report.problems.map((problem, i) => (
             <li key={`${problem.name}-${problem.channel}-${i}`}>
               <span className="font-semibold">{problem.name}</span> · {problem.channel} —{' '}
-              {problem.error === 'not_configured' ? 'that provider has no keys yet' : problem.error}
+              {problem.error}
             </li>
           ))}
         </ul>

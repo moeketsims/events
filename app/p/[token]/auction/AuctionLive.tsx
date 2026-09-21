@@ -21,11 +21,11 @@ import {
   auctionTopic,
   realtimeEnabled,
   type BidPlacedPayload,
-  type BidVoidedPayload,
   type LotStatusPayload,
   type OutbidPayload,
 } from '@/lib/realtime';
 import type { AuctionState, LotStateRow } from '@/lib/auction/state';
+import { deriveOutbid } from '@/lib/auction/outbid';
 import { cn } from '@/lib/utils';
 
 export type LotCard = {
@@ -46,7 +46,7 @@ type Live = {
   bidderNumber: number | null;
   /** Lot ids whose close time has just been pushed out. */
   extended: Set<string>;
-  /** Lot ids where this attendee has just lost the lead. */
+  /** Open lots this attendee has bid on and is not leading. */
   outbid: Set<string>;
   /** `connecting` on first load, `live` once subscribed, `down` after a drop. */
   channel: ChannelState;
@@ -73,8 +73,13 @@ export function useLive(): Live {
  *
  * Holds the lot map for every page under `/p/[token]/auction` and applies
  * payloads in place: `bid_placed` moves an amount and a bidder number,
- * `lot_status` flips a lot, `outbid` marks this attendee's loss. A
- * `bid_voided` payload has no bid count, so that one refetches.
+ * `lot_status` flips a lot. A `bid_voided` payload has no bid count, so that
+ * one refetches.
+ *
+ * "Outbid" is not remembered from the `outbid` event; it is derived from the
+ * board and the set of lots this attendee has bid on, which the server sends
+ * with every state. A guest who reopens the page after losing the lead sees
+ * the badge without having been there when the event fired.
  *
  * Both a phone with a wrong clock and a phone with no realtime are handled:
  * the state route returns the server's `now`, which is used to correct every
@@ -90,13 +95,13 @@ export function AuctionLive({
   token: string;
   auctionId: string;
   attendeeId: string;
-  initial: AuctionState & { bidderNumber: number | null };
+  initial: AuctionState & { bidderNumber: number | null; bidLotIds: string[] };
   children: React.ReactNode;
 }) {
   const [lots, setLots] = useState<LotStateRow[]>(initial.lots);
   const [channel, setChannel] = useState<ChannelState>(realtimeEnabled ? 'connecting' : 'live');
   const [extended, setExtended] = useState<Set<string>>(new Set());
-  const [outbid, setOutbid] = useState<Set<string>>(new Set());
+  const [bidLots, setBidLots] = useState<Set<string>>(() => new Set(initial.bidLotIds));
   const [skewMs, setSkewMs] = useState(() => new Date(initial.now).getTime() - Date.now());
   const closesAt = useRef(new Map(initial.lots.map((lot) => [lot.lotId, lot.closesAt])));
 
@@ -104,9 +109,10 @@ export function AuctionLive({
     try {
       const response = await fetch(`/p/${token}/auction/state`, { cache: 'no-store' });
       if (!response.ok) return;
-      const data = (await response.json()) as AuctionState;
+      const data = (await response.json()) as AuctionState & { bidLotIds?: string[] };
       setSkewMs(new Date(data.now).getTime() - Date.now());
       setLots(data.lots);
+      if (data.bidLotIds) setBidLots(new Set(data.bidLotIds));
       closesAt.current = new Map(data.lots.map((lot) => [lot.lotId, lot.closesAt]));
     } catch {
       // A missed refetch is a board that is a couple of seconds stale.
@@ -176,14 +182,12 @@ export function AuctionLive({
           ),
         );
 
-        // A bid of this attendee's own clears their outbid flag on that lot.
-        setOutbid((current) => {
-          if (!current.has(bid.lot_id)) return current;
-          if (bid.bidder_number !== initial.bidderNumber) return current;
-          const next = new Set(current);
-          next.delete(bid.lot_id);
-          return next;
-        });
+        // A bid of this attendee's own puts the lot among those they have bid on.
+        if (initial.bidderNumber !== null && bid.bidder_number === initial.bidderNumber) {
+          setBidLots((current) =>
+            current.has(bid.lot_id) ? current : new Set(current).add(bid.lot_id),
+          );
+        }
       })
       .on('broadcast', { event: 'lot_status' }, ({ payload }) => {
         if (cancelled) return;
@@ -200,15 +204,11 @@ export function AuctionLive({
         // page needs more than the payload carries.
         if (status.status === 'closed' || status.status === 'unsold') void refresh();
       })
-      .on('broadcast', { event: 'bid_voided' }, ({ payload }) => {
+      .on('broadcast', { event: 'bid_voided' }, () => {
         if (cancelled) return;
-        const voided = payload as BidVoidedPayload;
+        // The refetch also brings back which lots this attendee still has a
+        // live bid on, so a voided bid drops its badge.
         void refresh();
-        setOutbid((current) => {
-          const next = new Set(current);
-          next.delete(voided.lot_id);
-          return next;
-        });
       })
       .subscribe((status) => {
         if (cancelled) return;
@@ -225,8 +225,12 @@ export function AuctionLive({
       .channel(attendeeTopic(attendeeId))
       .on('broadcast', { event: 'outbid' }, ({ payload }) => {
         if (cancelled) return;
+        // The board payload already carries the new leader; this one confirms
+        // the lot is among this attendee's, in case the page missed their bid.
         const lost = payload as OutbidPayload;
-        setOutbid((current) => new Set(current).add(lost.lot_id));
+        setBidLots((current) =>
+          current.has(lost.lot_id) ? current : new Set(current).add(lost.lot_id),
+        );
       })
       .subscribe();
 
@@ -237,6 +241,11 @@ export function AuctionLive({
       supabase.removeChannel(mine);
     };
   }, [auctionId, attendeeId, refresh, flagExtended, initial.bidderNumber]);
+
+  const outbid = useMemo(
+    () => deriveOutbid(lots, initial.bidderNumber, bidLots),
+    [lots, initial.bidderNumber, bidLots],
+  );
 
   const value = useMemo<Live>(
     () => ({

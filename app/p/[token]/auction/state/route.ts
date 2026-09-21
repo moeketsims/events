@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifyTokenOfKind } from '@/lib/auth/pass';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { auctionState } from '@/lib/auction/state';
+import { attendeeBidLotIds } from '@/lib/auction/attendee';
 
 /**
  * The board, for this attendee's bidding page — BUILD-SPEC §7.3.
@@ -9,6 +10,10 @@ import { auctionState } from '@/lib/auction/state';
  * The polling fallback when realtime is off, and the refetch after a
  * `bid_voided` payload, which carries no bid count. Anonymised: bidder numbers
  * only, never a name. Never cached.
+ *
+ * Alongside the board it returns the lots this attendee holds a live bid on,
+ * so "Outbid" is derived from the server's truth on every load rather than
+ * remembered from an event that arrived while the page happened to be open.
  */
 
 export const runtime = 'nodejs';
@@ -39,9 +44,14 @@ export async function GET(_request: Request, context: { params: Promise<{ token:
   if (!auction) return NextResponse.json({ error: 'no_auction' }, { status: 404 });
 
   const state = await auctionState(admin, auction.id);
+  const bidLotIds = await attendeeBidLotIds(
+    admin,
+    attendee.id,
+    state.lots.map((lot) => lot.lotId),
+  );
 
   return NextResponse.json(
-    { ...state, bidderNumber: attendee.bidder_number },
+    { ...state, bidderNumber: attendee.bidder_number, bidLotIds },
     { headers: { 'Cache-Control': 'no-store' } },
   );
 }

@@ -82,3 +82,23 @@ export async function loadAttendeeAuction(token: string): Promise<AttendeeAuctio
     },
   };
 }
+
+/**
+ * The lots this attendee holds a live bid on, restricted to `lotIds` so a bid
+ * from another event's auction cannot leak into this board. Feeds
+ * `deriveOutbid`, so a fresh load and a live page agree on what was lost.
+ */
+export async function attendeeBidLotIds(
+  admin: ReturnType<typeof createAdminClient>,
+  attendeeId: string,
+  lotIds: string[],
+): Promise<string[]> {
+  if (lotIds.length === 0) return [];
+  const { data } = await admin
+    .from('bids')
+    .select('lot_id')
+    .eq('attendee_id', attendeeId)
+    .is('voided_at', null)
+    .in('lot_id', lotIds);
+  return [...new Set((data ?? []).map((row) => row.lot_id))];
+}

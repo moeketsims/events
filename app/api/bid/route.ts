@@ -14,7 +14,9 @@ import { AUCTION_TERMS_VERSION, CONSENT_PURPOSE, CONSENT_SOURCE } from '@/lib/co
  * records the auction terms on first bid, and passes the call through.
  *
  * `terms_required` is this route's own result, not the function's: the terms
- * are a product rule about consent, not a rule about the ledger.
+ * are a product rule about consent, not a rule about the ledger. So is
+ * `no_contact`: an attendee row with no contact has nowhere to record that
+ * consent, and a bid without recorded terms is refused rather than assumed.
  */
 
 export const runtime = 'nodejs';
@@ -34,6 +36,7 @@ export type BidResult =
   | 'not_an_attendee'
   | 'lot_not_found'
   | 'terms_required'
+  | 'no_contact'
   | 'invalid'
   | 'rate_limited';
 
@@ -112,35 +115,42 @@ export async function POST(request: Request) {
 
   // The auction terms are recorded against the *contact*, because that is what
   // `consents` is keyed by. A plus-one shares the host's contact and so
-  // inherits their acceptance; a walk-in has a contact of their own.
-  if (attendee.contact_id) {
-    const { data: consent } = await admin
-      .from('consents')
-      .select('id')
-      .eq('contact_id', attendee.contact_id)
-      .eq('purpose', CONSENT_PURPOSE.auctionTerms)
-      .is('revoked_at', null)
-      .limit(1)
-      .maybeSingle();
+  // inherits their acceptance; a walk-in has a contact of their own. Every
+  // attendee the platform creates has one; a row without one cannot evidence
+  // acceptance, so it cannot bid.
+  if (!attendee.contact_id) {
+    return json({ result: 'no_contact', highBid: null, nextMin: null, closesAt: null });
+  }
 
-    if (!consent) {
-      if (!acceptTerms) {
-        return json({
-          result: 'terms_required',
-          highBid: null,
-          nextMin: null,
-          closesAt: null,
-          termsVersion: AUCTION_TERMS_VERSION,
-        });
-      }
+  const { data: consent } = await admin
+    .from('consents')
+    .select('id')
+    .eq('contact_id', attendee.contact_id)
+    .eq('purpose', CONSENT_PURPOSE.auctionTerms)
+    .is('revoked_at', null)
+    .limit(1)
+    .maybeSingle();
 
-      await admin.from('consents').insert({
-        contact_id: attendee.contact_id,
-        purpose: CONSENT_PURPOSE.auctionTerms,
-        channel: 'in_app',
-        wording_version: AUCTION_TERMS_VERSION,
-        source: CONSENT_SOURCE.auctionBid,
+  if (!consent) {
+    if (!acceptTerms) {
+      return json({
+        result: 'terms_required',
+        highBid: null,
+        nextMin: null,
+        closesAt: null,
+        termsVersion: AUCTION_TERMS_VERSION,
       });
+    }
+
+    const { error: consentError } = await admin.from('consents').insert({
+      contact_id: attendee.contact_id,
+      purpose: CONSENT_PURPOSE.auctionTerms,
+      channel: 'in_app',
+      wording_version: AUCTION_TERMS_VERSION,
+      source: CONSENT_SOURCE.auctionBid,
+    });
+    if (consentError) {
+      return NextResponse.json({ error: consentError.message }, { status: 500 });
     }
   }
 

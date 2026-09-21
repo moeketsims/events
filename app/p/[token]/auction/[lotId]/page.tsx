@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { loadAttendeeAuction } from '@/lib/auction/attendee';
+import { attendeeBidLotIds, loadAttendeeAuction } from '@/lib/auction/attendee';
 import { auctionState } from '@/lib/auction/state';
 import { formatBidderNumber, formatTime } from '@/lib/dates';
 import { AuctionLive } from '../AuctionLive';
@@ -46,6 +46,12 @@ export default async function LotPage({
       .limit(5),
   ]);
 
+  const bidLotIds = await attendeeBidLotIds(
+    admin,
+    attendee.id,
+    state.lots.map((row) => row.lotId),
+  );
+
   const recent = (bids ?? []).map((bid) => ({
     id: bid.id,
     amount: Number(bid.amount),
@@ -58,7 +64,7 @@ export default async function LotPage({
       token={token}
       auctionId={auction.id}
       attendeeId={attendee.id}
-      initial={{ ...state, bidderNumber: attendee.bidderNumber }}
+      initial={{ ...state, bidderNumber: attendee.bidderNumber, bidLotIds }}
     >
       <Link
         href={`/p/${token}/auction`}

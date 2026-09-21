@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin';
-import { loadAttendeeAuction } from '@/lib/auction/attendee';
+import { attendeeBidLotIds, loadAttendeeAuction } from '@/lib/auction/attendee';
 import { auctionState } from '@/lib/auction/state';
 import { formatZAR } from '@/lib/money';
 import { AuctionLive, LotGrid, type LotCard } from './AuctionLive';
@@ -26,6 +26,12 @@ export default async function AuctionGridPage({ params }: { params: Promise<{ to
       .order('lot_number', { ascending: true }),
   ]);
 
+  const bidLotIds = await attendeeBidLotIds(
+    admin,
+    attendee.id,
+    state.lots.map((lot) => lot.lotId),
+  );
+
   const cards: LotCard[] = (lots ?? []).map((lot) => ({
     lotId: lot.id,
     image: lot.images[0] ?? null,
@@ -38,6 +44,7 @@ export default async function AuctionGridPage({ params }: { params: Promise<{ to
     ...state,
     lots: [...state.lots].sort((a, b) => (order.get(a.lotId) ?? 0) - (order.get(b.lotId) ?? 0)),
     bidderNumber: attendee.bidderNumber,
+    bidLotIds,
   };
 
   const open = ordered.lots.filter((lot) => lot.status === 'open').length;

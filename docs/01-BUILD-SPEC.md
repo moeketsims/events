@@ -867,11 +867,11 @@ Unit tests: round trip, tampered signature rejected, wrong kind rejected, stable
 { "lotId": "uuid", "amount": 2500 }
 // response 200
 { "result": "ok" | "too_low" | "lot_closed" | "not_checked_in" | "not_an_attendee"
-          | "lot_not_found" | "terms_required" | "invalid" | "rate_limited",
+          | "lot_not_found" | "terms_required" | "no_contact" | "invalid" | "rate_limited",
   "highBid": 2500, "nextMin": 2750, "closesAt": "…" }
 ```
 
-`terms_required` is the route's own result, not `place_bid`'s: the auction terms are a consent rule rather than a ledger rule. It is returned with 200 when the bidder's **contact** has no un-revoked `auction_terms` consent and the request did not carry `acceptTerms: true`; the client shows the terms and repeats the bid with that flag, which writes the consent row and places the bid in one call. `invalid` covers a token that does not verify or no longer matches the attendee row, and `rate_limited` comes with HTTP 429.
+`terms_required` and `no_contact` are the route's own results, not `place_bid`'s. `no_contact` is returned when the attendee row has no contact to record the terms against; the bid is refused rather than placed without recorded acceptance. `terms_required` exists because the auction terms are a consent rule rather than a ledger rule. It is returned with 200 when the bidder's **contact** has no un-revoked `auction_terms` consent and the request did not carry `acceptTerms: true`; the client shows the terms and repeats the bid with that flag, which writes the consent row and places the bid in one call. `invalid` covers a token that does not verify or no longer matches the attendee row, and `rate_limited` comes with HTTP 429.
 
 Rate limit: 10 requests per 10 seconds per attendee (in-memory map in the route; acceptable for POC).
 

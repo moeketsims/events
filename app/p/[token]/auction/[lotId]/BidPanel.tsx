@@ -6,6 +6,7 @@ import { auctionTerms, AUCTION_TERMS_VERSION } from '@/lib/consent';
 import { formatBidderNumber } from '@/lib/dates';
 import { bidStep, formatZAR, nextMinBid, type IncrementRow } from '@/lib/money';
 import type { BidResponse } from '@/app/api/bid/route';
+import { messageStale } from '@/lib/auction/outbid';
 import { useLive } from '../AuctionLive';
 import { cn } from '@/lib/utils';
 
@@ -21,6 +22,11 @@ import { cn } from '@/lib/utils';
  * Every `result` the contract names has its own sentence. "Too low" in
  * particular says what the minimum is *now*, because by the time a rejection
  * comes back someone else has usually moved the board.
+ *
+ * A sentence is true of one high bid. Each carries the high bid it was said
+ * about, and the moment the board moves past it the sentence goes and the
+ * derived state (leading, outbid) speaks instead: "You are leading" must not
+ * outlive the lead.
  */
 export function BidPanel({
   token,
@@ -39,9 +45,12 @@ export function BidPanel({
   const [custom, setCustom] = useState(false);
   const [amount, setAmount] = useState('');
   const [pending, setPending] = useState(false);
-  const [message, setMessage] = useState<{ tone: 'ok' | 'warn' | 'error'; text: string } | null>(
-    null,
-  );
+  const [message, setMessage] = useState<{
+    tone: 'ok' | 'warn' | 'error';
+    text: string;
+    /** The lot's high bid this sentence was true of. */
+    atHighBid: number | null;
+  } | null>(null);
   const [terms, setTerms] = useState<{ amount: number } | null>(null);
   const [cooldownUntil, setCooldownUntil] = useState(0);
 
@@ -55,6 +64,13 @@ export function BidPanel({
     if (!custom) setAmount('');
   }, [custom]);
 
+  // The board moved past what the message was about: drop it. An error about
+  // the network is not about the board and stays until the next attempt.
+  const highBid = lot?.highBid ?? null;
+  useEffect(() => {
+    setMessage((current) => (messageStale(current, highBid) ? null : current));
+  }, [highBid]);
+
   if (!lot) return null;
 
   const closed = lot.status !== 'open';
@@ -62,7 +78,7 @@ export function BidPanel({
   async function place(value: number, acceptTerms = false) {
     if (pending) return;
     if (Date.now() < cooldownUntil) {
-      setMessage({ tone: 'warn', text: 'One moment — that is a lot of bids in a few seconds.' });
+      say('warn', 'One moment — that is a lot of bids in a few seconds.');
       return;
     }
 
@@ -77,56 +93,60 @@ export function BidPanel({
       const data = (await response.json()) as BidResponse;
       apply(data, value);
     } catch {
-      setMessage({
-        tone: 'error',
-        text: 'That did not reach us. Check your signal and try again.',
-      });
+      say('error', 'That did not reach us. Check your signal and try again.');
     } finally {
       setPending(false);
     }
   }
 
+  /** A sentence about the board as it stands, unless `at` says otherwise. */
+  function say(tone: 'ok' | 'warn' | 'error', text: string, at: number | null = highBid) {
+    setMessage({ tone, text, atHighBid: at });
+  }
+
   function apply(data: BidResponse, attempted: number) {
     switch (data.result) {
-      case 'ok':
+      case 'ok': {
         setTerms(null);
         setCustom(false);
         setAmount('');
-        setMessage({
-          tone: 'ok',
-          text: `You are leading at ${formatZAR(data.highBid ?? attempted)}.`,
-        });
+        const placed = data.highBid ?? attempted;
+        say('ok', `You are leading at ${formatZAR(placed)}.`, placed);
         refresh();
         break;
+      }
       case 'terms_required':
         setTerms({ amount: attempted });
         break;
       case 'too_low':
-        setMessage({
-          tone: 'warn',
-          text: `The minimum is ${formatZAR(data.nextMin)} now — someone got there first.`,
-        });
+        // True of the high bid the server saw, which the refetch brings here;
+        // it stays until someone moves the board again.
+        say(
+          'warn',
+          `The minimum is ${formatZAR(data.nextMin)} now — someone got there first.`,
+          data.highBid,
+        );
         refresh();
         break;
       case 'lot_closed':
-        setMessage({ tone: 'warn', text: 'Bidding on this lot has closed.' });
+        say('warn', 'Bidding on this lot has closed.');
         refresh();
         break;
       case 'not_checked_in':
-        setMessage({
-          tone: 'warn',
-          text: 'Bidding opens once you have checked in at the door.',
-        });
+        say('warn', 'Bidding opens once you have checked in at the door.');
         break;
       case 'not_an_attendee':
-        setMessage({ tone: 'error', text: 'This pass is for a different event.' });
+        say('error', 'This pass is for a different event.');
+        break;
+      case 'no_contact':
+        say('error', 'This pass is not linked to a guest record. Ask at the desk.');
         break;
       case 'rate_limited':
         setCooldownUntil(Date.now() + 10_000);
-        setMessage({ tone: 'warn', text: 'One moment — that is a lot of bids in a few seconds.' });
+        say('warn', 'One moment — that is a lot of bids in a few seconds.');
         break;
       default:
-        setMessage({ tone: 'error', text: 'That bid could not be placed. Try again.' });
+        say('error', 'That bid could not be placed. Try again.');
     }
   }
 

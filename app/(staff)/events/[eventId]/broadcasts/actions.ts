@@ -15,7 +15,14 @@ export type SendBroadcastState = {
     /** Attendees the message was written to. */
     recipients: number;
     inApp: { sent: number; failed: number };
-    whatsapp: { sent: number; failed: number; skipped: number };
+    whatsapp: {
+      sent: number;
+      failed: number;
+      /** Contacts with no number or no opt-in; never attempted. */
+      skipped: number;
+      /** Attempted and failed only because the provider has no keys yet. */
+      notConfigured: number;
+    };
     /** The first few failures, so a wrong key is diagnosable from the page. */
     problems: { name: string; channel: string; error: string }[];
   };
@@ -189,7 +196,7 @@ export async function sendBroadcast(
   const report: NonNullable<SendBroadcastState['report']> = {
     recipients: recipients.length,
     inApp: { sent: 0, failed: 0 },
-    whatsapp: { sent: 0, failed: 0, skipped: skippedWhatsApp },
+    whatsapp: { sent: 0, failed: 0, skipped: skippedWhatsApp, notConfigured: 0 },
     problems: [],
   };
 
@@ -201,6 +208,12 @@ export async function sendBroadcast(
       bucket.sent++;
     } else {
       bucket.failed++;
+      // An unconfigured provider fails every row the same way; one sentence
+      // on the report says so, rather than a list of names that did nothing wrong.
+      if (result.error === 'not_configured' && job.input.channel === 'whatsapp') {
+        report.whatsapp.notConfigured++;
+        return;
+      }
       report.problems.push({
         name: job.name,
         channel: job.input.channel,
