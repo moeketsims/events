@@ -34,3 +34,9 @@ Thumbs.db
 
 # Local deployment secrets, filled by hand, read by scripts/deploy-dev.sh
 .deploy/
+
+.vercel
+.env*
+
+# Generated walkthrough recordings
+recordings/

@@ -1,5 +1,11 @@
+# pnpm 11 reads build-script permissions from here rather than package.json.
+# Each of these is a dependency this project already relies on: esbuild backs
+# tsx and vitest, sharp backs next/image, the Supabase CLI fetches its own
+# binary, unrs-resolver backs ESLint, and ffmpeg-static supplies the encoder
+# that scripts/record-setup.mts uses for the walkthrough clips.
 allowBuilds:
   esbuild: true
+  ffmpeg-static: true
   sharp: true
   supabase: true
   unrs-resolver: true
