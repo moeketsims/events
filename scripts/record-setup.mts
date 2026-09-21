@@ -301,4 +301,5 @@ writeFileSync(`${OUT_DIR}/narration-setup.json`, JSON.stringify(trimmedBeats(), 
 
 const mb = (statSync(FINAL).size / 1024 / 1024).toFixed(1);
 console.log(`\n  ${FINAL}  (${mb} MB)`);
+console.log(`  ${added} guests added during the take`);
 console.log(`  Event created during the take: ${eventUrl}\n`);
