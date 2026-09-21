@@ -139,6 +139,18 @@ export async function caption(page: Page, text: string, holdMs = 2600): Promise<
   await page.waitForTimeout(holdMs);
 }
 
+/** Clear the caption bar, for moments where the page itself is the point. */
+export async function hideCaption(page: Page): Promise<void> {
+  await ensureOverlay(page);
+  await page
+    .evaluate(() => {
+      const bar = document.getElementById('__cap');
+      if (bar) bar.style.opacity = '0';
+    })
+    .catch(() => {});
+  await page.waitForTimeout(280);
+}
+
 export async function setStep(page: Page, n: number, label: string): Promise<void> {
   await ensureOverlay(page);
   state.step = n;
