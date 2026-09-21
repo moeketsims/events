@@ -1,33 +1,39 @@
 /**
- * Record the "set it up" clip — docs/08-WALKTHROUGH-RECORDING.md, Act 1.
+ * Record the "set it up" clip — docs/08, Act 1.
  *
  *   pnpm exec tsx scripts/record-setup.mts
  *
- * A teaching video, not a showreel. It drives the deployed site with a real
- * Chromium and draws the things a screen recording cannot show by itself: a
- * cursor that travels to each control, a gold ring around that control before
- * it is used, and a pulse at the moment of the click. Captions are burned into
- * the page, because a clip shared on WhatsApp is watched with the sound off.
- *
- * Headless Chromium never paints an operating-system pointer into its
- * recording, so the cursor here is drawn in the page and moved to the real
- * bounding box of the real element a beat before the real click happens.
+ * A staff member signs in, creates an event from nothing, publishes it and
+ * builds the guest list. The drawn cursor, ring and click pulse come from
+ * scripts/lib/record-ui.mts, shared with the other recorders.
  *
  * Sign-in runs in a throwaway context whose cookies are copied into the
  * recorded one, so the one-time link never appears on screen.
  *
  * Output: recordings/cut-events-setup.mp4
  */
-import { chromium, type BrowserContext, type Locator, type Page } from '@playwright/test';
+import { chromium, type BrowserContext } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
-import ffmpegPath from 'ffmpeg-static';
-import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, rmSync, existsSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+  caption,
+  encodeForWhatsApp,
+  ensureOverlay,
+  goto,
+  pointAndClick,
+  pointAndType,
+  ring,
+  setStep,
+  showCard,
+  smoothScroll,
+  startClock,
+  trimmedBeats,
+} from './lib/record-ui.mts';
 
 const SITE = process.env.SITE ?? 'https://cut-events.vercel.app';
 const STAFF = 'organiser@demo.cut-events.test';
 const OUT_DIR = 'recordings';
-const RAW_DIR = `${OUT_DIR}/raw`;
+const RAW_DIR = `${OUT_DIR}/raw-setup`;
 const FINAL = `${OUT_DIR}/cut-events-setup.mp4`;
 
 const EVENT = {
@@ -35,13 +41,6 @@ const EVENT = {
   venue: 'CUT Bloemfontein Campus',
   capacity: '120',
 };
-
-/** How long the drawn cursor takes to travel. Slow enough to follow. */
-const TRAVEL_MS = 680;
-
-// ---------------------------------------------------------------------------
-// Environment
-// ---------------------------------------------------------------------------
 
 function readEnv(file: string): Record<string, string> {
   try {
@@ -64,281 +63,15 @@ function startsAt(): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T18:00`;
 }
 
-// ---------------------------------------------------------------------------
-// The drawn layer: cursor, ring, pulse, caption, step chip, cards
-// ---------------------------------------------------------------------------
-
-let cursor = { x: 640, y: 400 };
-let step = 0;
-let stepLabel = '';
-
-const OVERLAY = String.raw`
-(function () {
-  if (document.getElementById('__ui')) return;
-  const root = document.createElement('div');
-  root.id = '__ui';
-  root.style.cssText =
-    'position:fixed;inset:0;z-index:2147483647;pointer-events:none;' +
-    'font-family:"Segoe UI",system-ui,sans-serif';
-  root.innerHTML =
-    '<div id="__ring" style="position:absolute;border:3px solid #FBB927;border-radius:12px;' +
-      'box-shadow:0 0 0 6px rgba(251,185,39,.22),0 12px 40px rgba(0,0,0,.30);opacity:0;' +
-      'transition:opacity .22s ease"></div>' +
-    '<div id="__pulse" style="position:absolute;width:26px;height:26px;margin:-13px 0 0 -13px;' +
-      'border-radius:50%;background:rgba(251,185,39,.6);opacity:0"></div>' +
-    '<div id="__cursor" style="position:absolute;width:30px;height:30px;margin:-3px 0 0 -3px;' +
-      'filter:drop-shadow(0 3px 6px rgba(0,0,0,.55))">' +
-      '<svg viewBox="0 0 24 24" width="30" height="30">' +
-      '<path d="M5 2.5 L5 19.5 L9.4 15.4 L12.3 21.6 L15.1 20.3 L12.3 14.3 L18.4 14.1 Z" ' +
-      'fill="#ffffff" stroke="#001738" stroke-width="1.4" stroke-linejoin="round"/></svg></div>' +
-    '<div id="__step" style="position:absolute;top:22px;right:22px;background:#001738;color:#FBB927;' +
-      'border:2px solid rgba(251,185,39,.5);border-radius:999px;padding:8px 18px;font-size:18px;' +
-      'font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:0;transition:opacity .3s"></div>' +
-    '<div id="__cap" style="position:absolute;left:0;right:0;bottom:0;' +
-      'background:linear-gradient(90deg,#001738 0%,#002a5c 100%);border-top:4px solid #FBB927;' +
-      'color:#fff;font-size:30px;font-weight:600;line-height:1.3;padding:20px 34px;' +
-      'box-shadow:0 -18px 44px rgba(0,0,0,.42);opacity:0;transition:opacity .28s ease"></div>';
-  document.body.appendChild(root);
-  const style = document.createElement('style');
-  style.textContent =
-    '@keyframes __pulse{0%{transform:scale(.4);opacity:.9}100%{transform:scale(3.8);opacity:0}}';
-  document.head.appendChild(style);
-})();
-`;
-
-/** Rebuild the drawn layer after a navigation and restore its state. */
-async function ensureOverlay(page: Page): Promise<void> {
-  await page.evaluate(OVERLAY);
-  await page.evaluate(
-    ({ x, y, n, label }) => {
-      const c = document.getElementById('__cursor')!;
-      c.style.transition = 'none';
-      c.style.left = `${x}px`;
-      c.style.top = `${y}px`;
-      if (n > 0) {
-        const s = document.getElementById('__step')!;
-        s.textContent = `Step ${n} · ${label}`;
-        s.style.opacity = '1';
-      }
-    },
-    { ...cursor, n: step, label: stepLabel },
-  );
-}
-
-async function caption(page: Page, text: string, holdMs = 2600): Promise<void> {
-  await page.evaluate((t) => {
-    const bar = document.getElementById('__cap')!;
-    bar.style.opacity = '0';
-    window.setTimeout(() => {
-      bar.textContent = t;
-      bar.style.opacity = '1';
-    }, 150);
-  }, text);
-  await page.waitForTimeout(holdMs);
-}
-
-async function setStep(page: Page, n: number, label: string): Promise<void> {
-  step = n;
-  stepLabel = label;
-  await page.evaluate(
-    ({ n, label }) => {
-      const s = document.getElementById('__step')!;
-      s.style.opacity = '0';
-      window.setTimeout(() => {
-        s.textContent = `Step ${n} · ${label}`;
-        s.style.opacity = '1';
-      }, 180);
-    },
-    { n, label },
-  );
-  await page.waitForTimeout(420);
-}
-
-/** Move the drawn cursor to a point and wait for it to arrive. */
-async function moveTo(page: Page, x: number, y: number): Promise<void> {
-  cursor = { x, y };
-  await page.evaluate(
-    ({ x, y, ms }) => {
-      const c = document.getElementById('__cursor')!;
-      c.style.transition = `left ${ms}ms cubic-bezier(.33,0,.2,1), top ${ms}ms cubic-bezier(.33,0,.2,1)`;
-      c.style.left = `${x}px`;
-      c.style.top = `${y}px`;
-    },
-    { x, y, ms: TRAVEL_MS },
-  );
-  await page.waitForTimeout(TRAVEL_MS + 90);
-}
-
-/** Put the ring around an element, or hide it when passed null. */
-async function ring(page: Page, target: Locator | null): Promise<void> {
-  if (!target) {
-    await page.evaluate(() => {
-      document.getElementById('__ring')!.style.opacity = '0';
-    });
-    await page.waitForTimeout(180);
-    return;
-  }
-  const box = await safeBox(page, target);
-  if (!box) return;
-  await page.evaluate(
-    (b) => {
-      const r = document.getElementById('__ring')!;
-      const pad = 7;
-      // Jump to the target rather than travelling to it: a ring sliding across
-      // the page points at everything it passes over on the way.
-      r.style.transition = 'none';
-      r.style.left = `${b.x - pad}px`;
-      r.style.top = `${b.y - pad}px`;
-      r.style.width = `${b.width + pad * 2}px`;
-      r.style.height = `${b.height + pad * 2}px`;
-      void r.offsetWidth;
-      r.style.transition = 'opacity .22s ease';
-      r.style.opacity = '1';
-    },
-    { x: box.x, y: box.y, width: box.width, height: box.height },
-  );
-  await page.waitForTimeout(420);
-}
-
-/**
- * The box of an element, having first brought it somewhere the viewer can
- * actually watch it being used: clear of the caption bar along the bottom and
- * of the step chip at the top.
- */
-async function safeBox(
-  page: Page,
-  target: Locator,
-): Promise<{ x: number; y: number; width: number; height: number } | null> {
-  const vp = page.viewportSize() ?? { width: 1280, height: 720 };
-  let box = await target.boundingBox();
-  const hidden = !box || box.y < 96 || box.y + box.height > vp.height - 150;
-  if (hidden) {
-    await target
-      .evaluate((el) => el.scrollIntoView({ block: 'center', behavior: 'smooth' }))
-      .catch(() => {});
-    await page.waitForTimeout(820);
-    box = await target.boundingBox();
-  } else {
-    await page.waitForTimeout(200);
-  }
-  return box;
-}
-
-async function pulse(page: Page, x: number, y: number): Promise<void> {
-  await page.evaluate(
-    ({ x, y }) => {
-      const p = document.getElementById('__pulse')!;
-      p.style.left = `${x}px`;
-      p.style.top = `${y}px`;
-      p.style.opacity = '1';
-      p.style.animation = 'none';
-      void p.offsetWidth;
-      p.style.animation = '__pulse .62s ease-out';
-      window.setTimeout(() => {
-        p.style.opacity = '0';
-      }, 600);
-    },
-    { x, y },
-  );
-  await page.waitForTimeout(360);
-}
-
-/** Point at a control, ring it, pulse, then actually use it. */
-async function pointAndClick(page: Page, target: Locator, afterMs = 700): Promise<void> {
-  await ring(page, target);
-  const box = await safeBox(page, target);
-  if (!box) throw new Error('target has no bounding box');
-  const x = box.x + box.width / 2;
-  const y = box.y + box.height / 2;
-  await moveTo(page, x, y);
-  await pulse(page, x, y);
-  await target.click();
-  await page.waitForTimeout(afterMs);
-  await ring(page, null);
-}
-
-/** Point at a field and type into it at a readable speed. */
-async function pointAndType(page: Page, target: Locator, text: string, delay = 55): Promise<void> {
-  await ring(page, target);
-  const box = await safeBox(page, target);
-  if (box) {
-    const x = box.x + Math.min(box.width / 2, 170);
-    const y = box.y + box.height / 2;
-    await moveTo(page, x, y);
-    await pulse(page, x, y);
-  }
-  await target.click();
-  await target.pressSequentially(text, { delay });
-  await page.waitForTimeout(440);
-  await ring(page, null);
-}
-
-async function showCard(
-  page: Page,
-  lines: string[],
-  holdMs = 3400,
-  fadeOut = false,
-): Promise<void> {
-  await page.evaluate(
-    ({ ls, fade, hold }) => {
-      const card = document.createElement('div');
-      card.style.cssText =
-        'position:fixed;inset:0;z-index:2147483647;background:linear-gradient(160deg,#001738 0%,#000d24 100%);' +
-        'color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;' +
-        'font-family:"Segoe UI",system-ui,sans-serif;text-align:center;opacity:0;transition:opacity .45s ease';
-      card.innerHTML =
-        '<div style="width:64px;height:4px;background:#FBB927;border-radius:2px;margin-bottom:8px"></div>' +
-        ls
-          .map((l, i) =>
-            i === 0
-              ? `<div style="font-size:56px;font-weight:700;line-height:1.1">${l}</div>`
-              : `<div style="font-size:26px;line-height:1.5;color:rgba(255,255,255,.78);max-width:780px">${l}</div>`,
-          )
-          .join('');
-      document.body.appendChild(card);
-      requestAnimationFrame(() => {
-        card.style.opacity = '1';
-      });
-      if (fade) {
-        window.setTimeout(() => {
-          card.style.opacity = '0';
-          window.setTimeout(() => card.remove(), 500);
-        }, hold - 500);
-      }
-    },
-    { ls: lines, fade: fadeOut, hold: holdMs },
-  );
-  await page.waitForTimeout(holdMs);
-}
-
-async function goto(page: Page, url: string): Promise<void> {
-  await page.goto(url, { waitUntil: 'networkidle' });
-  await ensureOverlay(page);
-  await page.waitForTimeout(520);
-}
-
-async function smoothScroll(page: Page, to: number, ms = 1000): Promise<void> {
-  await page.evaluate((y) => window.scrollTo({ top: y, behavior: 'smooth' }), to);
-  await page.waitForTimeout(ms);
-}
-
-// ---------------------------------------------------------------------------
-// Run
-// ---------------------------------------------------------------------------
-
 const env = readEnv('.deploy/secrets.env');
 if (!env.SUPABASE_PROJECT_REF || !env.SUPABASE_SECRET_KEY) {
   console.error('Missing SUPABASE_PROJECT_REF or SUPABASE_SECRET_KEY in .deploy/secrets.env');
   process.exit(1);
 }
 
-const db = createClient(
-  `https://${env.SUPABASE_PROJECT_REF}.supabase.co`,
-  env.SUPABASE_SECRET_KEY,
-  {
-    auth: { autoRefreshToken: false, persistSession: false },
-  },
-);
+const db = createClient(`https://${env.SUPABASE_PROJECT_REF}.supabase.co`, env.SUPABASE_SECRET_KEY, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
 
 // Clear events left by an earlier take so re-running does not pile them up.
 // Matched on the exact recording title, so it can never touch the seeded Gala.
@@ -400,9 +133,10 @@ const ctx: BrowserContext = await browser.newContext({
   recordVideo: { dir: RAW_DIR, size: { width: 1280, height: 720 } },
 });
 const page = await ctx.newPage();
+startClock();
 
-// --- Title ----------------------------------------------------------------
-await goto(page, `${SITE}/login`);
+// Painted before anything is navigated to, so the first frame is never blank
+// white — which is the frame WhatsApp turns into the thumbnail.
 await showCard(
   page,
   [
@@ -410,24 +144,27 @@ await showCard(
     'CUT Events · Institutional Advancement',
     'Watch the gold ring. That is where to click.',
   ],
-  4400,
+  4200,
+  true,
+  'Setting up an event on CUT Events. Watch the gold ring — that is where to click.',
   true,
 );
 
 // --- 1. Sign in -----------------------------------------------------------
+await goto(page, `${SITE}/login`);
 await setStep(page, 1, 'Sign in');
 await caption(page, 'Open cut-events.vercel.app and sign in with your CUT address.', 3400);
 const emailField = page.locator('input[type="email"]').first();
 if ((await emailField.count()) > 0) {
-  await pointAndType(page, emailField, 'organiser@demo.cut-events.test', 50);
+  await pointAndType(page, emailField, STAFF, 50);
 }
 await caption(page, 'A six-digit code arrives by email. There is no password to remember.', 3800);
 
 await ctx.addCookies(cookies);
 
 // --- 2. The dashboard -----------------------------------------------------
-await setStep(page, 2, 'Your dashboard');
 await goto(page, `${SITE}/dashboard`);
+await setStep(page, 2, 'Your dashboard');
 await caption(page, 'This is the evening at a glance.', 3000);
 await smoothScroll(page, 460);
 await caption(page, 'Who was invited, who replied, and who is already in the room.', 3600);
@@ -515,11 +252,17 @@ await goto(page, eventUrl);
 await smoothScroll(page, 820);
 await caption(page, 'The door, the table codes, the auction — all from this one page.', 4200);
 
-await showCard(page, [
-  'That is the setup.',
-  'Next: print the table code, and guests check themselves in.',
-  'cut-events.vercel.app',
-]);
+await showCard(
+  page,
+  [
+    'That is the setup.',
+    'Next: print the table code, and guests check themselves in.',
+    'cut-events.vercel.app',
+  ],
+  3600,
+  false,
+  'And that is the setup. Next, print the table code, and guests check themselves in.',
+);
 
 await ctx.close();
 const raw = await page.video()?.path();
@@ -530,53 +273,10 @@ if (!raw || !existsSync(raw)) {
   process.exit(1);
 }
 
-// --- Encode for WhatsApp --------------------------------------------------
-const ffmpeg = ffmpegPath as unknown as string;
-if (!existsSync(ffmpeg)) {
-  console.log('  fetching the ffmpeg binary…');
-  execFileSync(
-    process.execPath,
-    ['node_modules/.pnpm/ffmpeg-static@5.3.0/node_modules/ffmpeg-static/install.js'],
-    { stdio: 'inherit' },
-  );
-}
-
 console.log('  encoding for WhatsApp…');
-execFileSync(
-  ffmpeg,
-  [
-    '-y',
-    '-i',
-    raw,
-    '-f',
-    'lavfi',
-    '-i',
-    'anullsrc=channel_layout=stereo:sample_rate=44100',
-    '-shortest',
-    '-c:v',
-    'libx264',
-    '-preset',
-    'slow',
-    '-crf',
-    '25',
-    '-pix_fmt',
-    'yuv420p',
-    '-vf',
-    'fps=30,scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2',
-    '-profile:v',
-    'main',
-    '-level',
-    '4.0',
-    '-c:a',
-    'aac',
-    '-b:a',
-    '64k',
-    '-movflags',
-    '+faststart',
-    FINAL,
-  ],
-  { stdio: 'ignore' },
-);
+encodeForWhatsApp(raw, FINAL);
+
+writeFileSync(`${OUT_DIR}/narration-setup.json`, JSON.stringify(trimmedBeats(), null, 2));
 
 const mb = (statSync(FINAL).size / 1024 / 1024).toFixed(1);
 console.log(`\n  ${FINAL}  (${mb} MB)`);
