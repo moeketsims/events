@@ -27,6 +27,7 @@ import {
   pointAndClick,
   setStep,
   showCard,
+  smoothScroll,
   startClock,
   trimmedBeats,
 } from './lib/record-ui.mts';
@@ -105,10 +106,55 @@ if (!bidders || bidders.length < 4) {
   process.exit(1);
 }
 
-// The guest whose phone we film bids on the lot nobody is watching, so the
-// board's hero lot is still free to move while the camera is on it.
-const guest = bidders[0]!;
-const rivals = bidders.slice(1);
+// The guest whose phone we film must be someone who has not bid yet, so the
+// clip shows the auction terms being accepted — that happens once, on a
+// guest's first bid — and so their screen carries no leftover outbid notice.
+const { data: alreadyBid } = await db
+  .from('bids')
+  .select('attendee_id, lots!inner(auction_id)')
+  .eq('lots.auction_id', auction.id)
+  .is('voided_at', null);
+const hasBid = new Set((alreadyBid ?? []).map((b) => b.attendee_id));
+
+let guest = bidders.find((b) => !hasBid.has(b.id));
+
+// Everyone in the room has bid already, which happens after a few takes. Bring
+// one more guest through the door, exactly as the evening would.
+if (!guest) {
+  const { data: waiting } = await db
+    .from('attendees')
+    .select('id, pass_token')
+    .eq('event_id', auction.event_id)
+    .is('checked_in_at', null)
+    .not('pass_token', 'is', null)
+    .limit(1)
+    .maybeSingle();
+
+  if (!waiting) {
+    console.error('Nobody left to check in. Run scripts/reseed-hosted.sh first.');
+    process.exit(1);
+  }
+
+  const { data: arrival, error: arrivalError } = await db.rpc('check_in_attendee', {
+    p_attendee_id: waiting.id,
+    p_staff_id: null as unknown as string,
+    p_event_id: auction.event_id,
+  });
+  const row = Array.isArray(arrival) ? arrival[0] : arrival;
+  if (arrivalError || !row) {
+    console.error(`Could not check a guest in: ${arrivalError?.message}`);
+    process.exit(1);
+  }
+  guest = { id: waiting.id, pass_token: waiting.pass_token, bidder_number: row.bidder_number };
+  console.log('  checked a waiting guest in, so someone in the room has not bid yet');
+}
+console.log(
+  `  filming Bidder ${String(guest.bidder_number).padStart(3, '0')}, who has not bid yet`,
+);
+
+// They bid on the lot the board is not watching, so the hero lot is still free
+// to move while the camera is on it.
+const rivals = bidders.filter((b) => b.id !== guest.id);
 
 /** The lowest bid the database will accept on a lot right now. */
 async function nextMin(lotId: string): Promise<number> {
@@ -170,11 +216,17 @@ try {
   // --- 1. A guest bids from their pass ------------------------------------
   await setStep(page, 1, 'From a guest’s phone');
   await goto(page, `${SITE}/p/${guest.pass_token}/auction/${otherLot.id}`);
-  await caption(page, 'A guest opens a lot from the pass already on their phone.', 3800);
-  await caption(page, 'The next valid bid is worked out by the database, not the phone.', 4000);
+  await caption(page, 'A guest opens a lot from the pass already on their phone.', 3400);
+
+  // The lot's photograph fills the first screen; the money is under it, and the
+  // money is what these captions are about.
+  await smoothScroll(page, 300, 1200);
+  await caption(page, 'The lot, what it stands at, and the least the next bid may be.', 4000);
+  await smoothScroll(page, 620, 1200);
+  await caption(page, 'Every bid so far, by number. The room never sees a name.', 4000);
 
   const bidButton = page.getByRole('button', { name: /^Bid R/ }).first();
-  await caption(page, 'One button. The amount is already the minimum it will accept.', 3600);
+  await caption(page, 'One button, already filled in with the smallest bid it will take.', 4200);
   await pointAndClick(page, bidButton, 1800);
 
   // The terms are accepted once, on a guest's first bid of the evening.
@@ -184,7 +236,9 @@ try {
     await pointAndClick(page, agree, 2600);
   }
   await ensureOverlay(page);
-  await caption(page, 'Placed. They are leading, and it is in the ledger.', 3600);
+  await smoothScroll(page, 320, 1100);
+  await caption(page, 'Placed. They are leading, and it is in the ledger.', 4000);
+  await caption(page, 'The minimum just moved up, and so did the next bid on offer.', 3800);
 
   // --- 2. The board -------------------------------------------------------
   await setStep(page, 2, 'The board in the room');
