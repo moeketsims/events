@@ -273,6 +273,13 @@ Prerequisites the **user** must supply before Week 1 finishes (the agent should 
 - **Could not perform myself:** `close_due_lots` on the **dev project**. `pg_cron` may be absent or may refuse a sub-minute schedule there; `0007` already falls back to every minute and says so in a notice, and the operator console (T4.2) can close a lot by hand regardless. One `select * from cron.job` once the key arrives settles it.
 - **No new migration was needed.** `supabase/tests/01-schema-behaviour.sql` already covers extension to 120 s, the settled winner, the under-reserve `unsold` and the idempotent second run; this task added nothing to the database, only the attendee-facing half of the behaviour, so no test case changed.
 
+### T3.6 Self-registration by event QR
+- Plan: `docs/07-IMPLEMENTATION-PLAN-SELF-REGISTRATION.md`. Build before T4.1.
+- `/join/[token]`: public page opened from a QR printed per event; first name, surname, email, consent; creates or matches the contact, creates the attendee as a walk-in, checks them in through `check_in_attendee` (bidder number assigned), emails the pass, shows the pass link and bidder number on screen.
+- `/events/[id]/join`: organiser page with the QR, the link, a print sheet, enable / disable / regenerate (audit-logged). Migration `0010` adds `events.join_token` and `events.join_nonce`.
+- Consent source `self_registration`; token kind `j.` in `lib/auth/join.ts`; honeypot and per-IP rate limit on the action.
+- **Done when:** the thirteen checks in `docs/07` §2.11 pass in the browser against the local stack.
+
 ---
 
 ## Week 4 — Projection, Console, Results, Polish, Rehearsal
@@ -307,6 +314,11 @@ Prerequisites the **user** must supply before Week 1 finishes (the agent should 
 - Follow `04-DEMO-SCRIPT.md` twice on the actual projector and phones. Reset with `pnpm seed` between runs.
 - Fix everything that surprised you; write the pre-demo checklist results into the script.
 - **Done when:** two consecutive clean runs, timed under 15 minutes, with the checklist complete.
+
+### T4.6 WhatsApp (last, decided 21 Sep 2026)
+- Plan: `docs/07-IMPLEMENTATION-PLAN-SELF-REGISTRATION.md` §3. Every WhatsApp path already exists and fails as `not_configured`; this task is verification once the Meta keys arrive.
+- Verify broadcast delivery and the status webhook, the pass by WhatsApp from the RSVP, and the outbid and winner templates on a real phone. Optional phone + opt-in on `/join/[token]`.
+- **Done when:** `docs/07` §3 passes on a real phone.
 
 ---
 
