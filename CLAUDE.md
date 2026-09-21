@@ -46,7 +46,8 @@ pnpm bid-storm           # concurrency test against the dev project
 ```
 
 ## Environment
-- The Supabase dev project reference and publishable key are in the user's global `~/.claude/CLAUDE.md`. Ask the user for the `sb_secret_…` key; do not guess it.
+- **Dev/POC Supabase project: `iwtdjdtbvhzvwdujztdr`** (name `cut-events`, region `eu-central-1`, created 21 Sep 2026). The reference in the user's global `~/.claude/CLAUDE.md` (`VxYOhTwf4HrJqwjr`) was never a real project and is stale; ignore it.
+- Credentials for it live in `.deploy/secrets.env`, which is gitignored and written by `scripts/deploy-login.sh`. Never print its contents. The project's new-format `sb_secret_…` key is rejected by the API, so `SUPABASE_SECRET_KEY` holds the standard service-role key instead; the publishable key is new-format and works.
 - Deployment target: Vercel, project linked to https://github.com/moeketsims/events.git, production branch `main`.
 - Time zone for all display: `Africa/Johannesburg`. Currency ZAR, formatted `R2 500`.
 

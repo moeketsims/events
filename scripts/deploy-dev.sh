@@ -4,7 +4,7 @@
 #
 # Prerequisites, done once by Moeketsi in a terminal (see scripts/deploy-login.sh):
 #   pnpm exec supabase login                                  # OAuth; CLI stores the token
-#   pnpm exec supabase link --project-ref VxYOhTwf4HrJqwjr    # prompts for the DB password, CLI stores it
+#   pnpm exec supabase link --project-ref <ref>               # prompts for the DB password, CLI stores it
 #   pnpm exec vercel login                                    # OAuth; CLI stores the token
 #
 # The only value this script reads is SUPABASE_SECRET_KEY, from the gitignored
@@ -26,9 +26,6 @@ case "$(uname -r 2>/dev/null)" in
 esac
 command -v node >/dev/null 2>&1 || { echo "node is not on PATH in this shell. Use PowerShell."; exit 1; }
 
-REF=VxYOhTwf4HrJqwjr
-SUPABASE_URL="https://$REF.supabase.co"
-PUBLISHABLE_KEY=sb_publishable_JrcV0gWPVkLMsM6Ve0QW6A_5cXuLhl7
 PROJECT=cut-events
 
 step() { printf '\n== %s\n' "$1"; }
@@ -36,7 +33,11 @@ fail() { printf '\n!! %s\n' "$1"; exit 1; }
 
 [ -f .deploy/secrets.env ] || fail "Missing .deploy/secrets.env"
 set -a; . .deploy/secrets.env; set +a
-[ -n "${SUPABASE_SECRET_KEY:-}" ] || fail "Fill SUPABASE_SECRET_KEY in .deploy/secrets.env"
+for v in SUPABASE_PROJECT_REF SUPABASE_SECRET_KEY SUPABASE_PUBLISHABLE_KEY; do
+  [ -n "${!v:-}" ] || fail "$v missing from .deploy/secrets.env"
+done
+REF="$SUPABASE_PROJECT_REF"
+SUPABASE_URL="https://$REF.supabase.co"
 [ -n "${PASS_SIGNING_SECRET:-}" ] || fail "PASS_SIGNING_SECRET missing from .deploy/secrets.env"
 [ -n "${CRON_SECRET:-}" ] || fail "CRON_SECRET missing from .deploy/secrets.env"
 
@@ -63,7 +64,7 @@ setenv() { # name value
   printf '  %s\n' "$1"
 }
 setenv NEXT_PUBLIC_SUPABASE_URL "$SUPABASE_URL"
-setenv NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY "$PUBLISHABLE_KEY"
+setenv NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY "$SUPABASE_PUBLISHABLE_KEY"
 setenv SUPABASE_SECRET_KEY "$SUPABASE_SECRET_KEY"
 setenv NEXT_PUBLIC_APP_URL "$APP_URL"
 setenv NEXT_PUBLIC_REALTIME_MODE "broadcast"
