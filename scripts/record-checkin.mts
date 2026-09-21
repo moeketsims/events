@@ -63,9 +63,13 @@ if (!env.SUPABASE_PROJECT_REF || !env.SUPABASE_SECRET_KEY) {
   process.exit(1);
 }
 
-const db = createClient(`https://${env.SUPABASE_PROJECT_REF}.supabase.co`, env.SUPABASE_SECRET_KEY, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
+const db = createClient(
+  `https://${env.SUPABASE_PROJECT_REF}.supabase.co`,
+  env.SUPABASE_SECRET_KEY,
+  {
+    auth: { autoRefreshToken: false, persistSession: false },
+  },
+);
 
 // ---------------------------------------------------------------------------
 // Put the event back to the state this clip starts from, so it is repeatable:
@@ -79,11 +83,7 @@ if (!departmentId) {
   process.exit(1);
 }
 
-let { data: event } = await db
-  .from('events')
-  .select('id')
-  .eq('title', EVENT_TITLE)
-  .maybeSingle();
+let { data: event } = await db.from('events').select('id').eq('title', EVENT_TITLE).maybeSingle();
 
 if (!event) {
   const starts = new Date();
@@ -190,11 +190,7 @@ await pointAndClick(page, page.getByRole('link', { name: /Self-registration QR/i
 await ensureOverlay(page);
 
 await caption(page, 'It is off until you switch it on.', 2800);
-await pointAndClick(
-  page,
-  page.getByRole('button', { name: /Turn on self-registration/i }),
-  2800,
-);
+await pointAndClick(page, page.getByRole('button', { name: /Turn on self-registration/i }), 2800);
 await caption(page, 'That is the code for this event, and nobody else’s.', 3400);
 
 const joinUrl = await page.locator('input[aria-label="Self-registration link"]').inputValue();
@@ -224,7 +220,11 @@ await caption(page, 'Then one button.', 2000);
 await pointAndClick(page, page.getByRole('button', { name: /Register and get my pass/i }), 3600);
 
 await caption(page, 'Checked in, and Bidder 001 — the first guest through the door.', 4200);
-await caption(page, 'Scanning a code that only exists inside the venue is the proof of arrival.', 4200);
+await caption(
+  page,
+  'Scanning a code that only exists inside the venue is the proof of arrival.',
+  4200,
+);
 
 // --- 4. Their pass --------------------------------------------------------
 await setStep(page, 4, 'Their pass');

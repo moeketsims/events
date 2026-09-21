@@ -69,9 +69,13 @@ if (!env.SUPABASE_PROJECT_REF || !env.SUPABASE_SECRET_KEY) {
   process.exit(1);
 }
 
-const db = createClient(`https://${env.SUPABASE_PROJECT_REF}.supabase.co`, env.SUPABASE_SECRET_KEY, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
+const db = createClient(
+  `https://${env.SUPABASE_PROJECT_REF}.supabase.co`,
+  env.SUPABASE_SECRET_KEY,
+  {
+    auth: { autoRefreshToken: false, persistSession: false },
+  },
+);
 
 // Clear events left by an earlier take so re-running does not pile them up.
 // Matched on the exact recording title, so it can never touch the seeded Gala.
