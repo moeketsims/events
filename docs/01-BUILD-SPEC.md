@@ -259,6 +259,8 @@ create table events (
   banner_url text,
   branding jsonb not null default '{}'::jsonb,   -- accent colour, faculty, sponsor logos
   auction_enabled boolean not null default false,
+  join_token text unique,                        -- 0010: signed j. token on the table QR; null = self-registration off
+  join_nonce uuid,                               -- 0010: the nonce the j. signature covers; regenerating revokes every printed code
   created_by uuid references profiles(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -825,6 +827,7 @@ Unit tests: round trip, tampered signature rejected, wrong kind rejected, stable
 | `/events/[id]/invitations` | Compose and send | `sendInvitations(eventId, invitationIds[], channels[])` → creates `message_deliveries`, calls messaging layer, updates statuses |
 | `/events/[id]/attendance` | Live register, export | `exportAttendance(eventId)` → CSV; subscribes to `event:{id}` |
 | `/events/[id]/broadcasts` | Compose, target, send, log | `sendBroadcast(eventId, body, audience, channels[])` |
+| `/events/[id]/join` | Self-registration QR: the code and link, an A4 print sheet at `/events/[id]/join/print`, enable / disable / regenerate (organiser, audit-logged) | `setSelfRegistration(eventId, intent)` |
 | `/events/[id]/auction` | Auction settings, lot CRUD, image upload to Storage bucket `lot-images` | `upsertAuction`, `upsertLot`, `deleteLot`, `reorderLots` |
 | `/events/[id]/auction/console` | Operator: open/close/extend/withdraw, void bid, identity lookup, proxy bid | `setLotStatus`, `voidBid`, `revealBidder(attendeeId)` (writes audit row), `proxyBid(lotId, attendeeId, amount)` |
 | `/events/[id]/results` | Lot results, winners with names, settlement status, CSV | |
@@ -853,6 +856,7 @@ Unit tests: round trip, tampered signature rejected, wrong kind rejected, stable
 
 | Route | Content |
 |---|---|
+| `/join/[token]` | Self-registration from the QR on the table (docs/07). Resolves the `j.` token against `events.join_token`; first name, surname, email, consent. Submit → match or create the contact, one `consents` row (`self_registration`), an `attendees` row with `is_walk_in`, `check_in_attendee` with a null staff id (bidder number assigned), pass emailed. Shows the pass link and bidder number on screen. Only while the event is `published` or `live`. |
 | `/rsvp/[token]` | Event details, attending yes/no, guest count (if allowed), custom questions, WhatsApp opt-in checkbox with consent wording. Submit → `rsvps` upsert, `invitations.status`, create `attendees` rows (one per guest) with pass tokens, send pass message. Shows the pass link on success. |
 | `/p/[token]` | Pass: QR (SVG), name, event, venue, time, "Add to calendar" (.ics link), bidder number once checked in, live broadcast feed (subscribes to `event:{id}` and refetches `/p/[token]/feed`), link to auction if enabled. Before check-in the auction link shows "Bidding opens once you have checked in at the door." |
 | `/p/[token]/feed` (GET, JSON) | The attendee's broadcasts: `broadcasts` joined to `message_deliveries` where `attendee_id` = this attendee and `channel = 'in_app'`, newest first, limit 50. Audience membership is therefore decided once, at send time, by which attendees received an `in_app` delivery row. |

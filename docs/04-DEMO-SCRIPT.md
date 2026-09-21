@@ -36,7 +36,7 @@ Laptop: open the Gala event overview, show the funnel tiles (40 invited, 28 acce
 Say: "Guests never install anything. The link is the pass."
 
 **4:00 — Door (2 min).**
-Phone 1 scans Phone 2's QR. Green card: "Welcome, Naledi." Show the attendance dashboard on the laptop updating without a refresh. Scan Phone 2 again: "Already checked in at 14:07". Scan the printed A6 card: checked in. Walk-in tab: add a fictitious guest in 20 seconds, checked in, bidder number assigned.
+Phone 1 scans Phone 2's QR. Green card: "Welcome, Naledi." Show the attendance dashboard on the laptop updating without a refresh. Scan Phone 2 again: "Already checked in at 14:07". Scan the printed A6 card: checked in. Phone 2 (now acting as a guest with no invitation) scans the table QR from the printed sheet, types a first name, surname and an `@example.com` address, ticks the consent and submits: "You are checked in" with a bidder number, and the register on the laptop ticks up again. If the guest's camera fails, the usher's Walk-in tab does the same in 20 seconds.
 
 Say: "No paper register. The list is live, exportable, and every check-in is time-stamped and attributed to the usher who scanned it."
 
