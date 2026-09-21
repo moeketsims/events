@@ -232,18 +232,35 @@ try {
 await setStep(page, 5, 'Add guests');
 await goto(page, `${eventUrl}/guests`);
 await caption(page, 'Contacts belong to the department, not to one event.', 3400);
+let added = 0;
+const COUNT_TO_TICK = 3;
 try {
-  const boxes = page.locator('main input[type="checkbox"]');
-  const n = Math.min(await boxes.count(), 3);
-  if (n > 0) {
-    await caption(page, 'Tick the people you want, then add them to the event.', 3200);
-    for (let i = 0; i < n; i++) {
-      await pointAndClick(page, boxes.nth(i), 340);
-    }
-    const add = page.getByRole('button', { name: /add .* to the event/i }).first();
-    if ((await add.count()) > 0) {
-      await pointAndClick(page, add, 2600);
-      await caption(page, 'Each one now has a private invitation link of their own.', 3600);
+  const openPicker = page.getByRole('button', { name: /^Add guests$/i }).first();
+  if ((await openPicker.count()) > 0) {
+    await caption(page, 'Open the picker: everyone not already invited is in it.', 3400);
+    await pointAndClick(page, openPicker, 1600);
+    await ensureOverlay(page);
+
+    // The picker is a dialog, so it is portalled outside <main>. The first box
+    // in it is "Select everyone shown", which is not what the caption says we
+    // are doing, so only the per-person boxes are ticked.
+    const boxes = page.locator('[role="dialog"] input[type="checkbox"]:not([aria-label])');
+    const n = Math.min(await boxes.count(), COUNT_TO_TICK);
+    if (n > 0) {
+      await caption(page, 'Tick the people you want at this one.', 2800);
+      for (let i = 0; i < n; i++) {
+        await pointAndClick(page, boxes.nth(i), 340);
+        added++;
+      }
+      const add = page
+        .locator('[role="dialog"]')
+        .getByRole('button', { name: /add .* to the event/i })
+        .first();
+      if ((await add.count()) > 0) {
+        await pointAndClick(page, add, 3000);
+        await ensureOverlay(page);
+        await caption(page, 'Every one of them now has a private link of their own.', 4000);
+      }
     }
   }
 } catch {
