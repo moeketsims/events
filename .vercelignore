@@ -1,0 +1,31 @@
+# What must never be uploaded to a Vercel build.
+#
+# The CLI uploads the working directory, which on a development machine holds
+# the local build output, the installed dependencies and the Supabase CLI's
+# local state — together far past Vercel's 100 MB per-file limit. Vercel
+# installs dependencies and builds from source itself, so none of it is needed.
+
+.git
+.github
+.claude
+.vercel
+
+# Build output, local and the production-check copy (next.config.ts distDir).
+.next
+.next-prod
+node_modules
+
+# Local secrets and Supabase CLI state.
+.deploy
+supabase/.branches
+supabase/.temp
+
+# Demo fixtures, docs and tests: used by the seed and by CI, never by the build.
+supabase/seed/lots
+docs
+tests
+e2e
+playwright-report
+test-results
+
+*.log
