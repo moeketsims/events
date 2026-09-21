@@ -10,6 +10,16 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
+# Node is installed on Windows, not inside WSL, so a WSL shell finds the pnpm
+# shim but no node and fails with "exec: node: not found". Say so plainly.
+case "$(uname -r 2>/dev/null)" in
+  *microsoft*|*Microsoft*|*WSL*)
+    echo "This is a WSL shell, where Node is not installed."
+    echo "Open PowerShell in this folder and run the commands there instead."
+    exit 1;;
+esac
+command -v node >/dev/null 2>&1 || { echo "node is not on PATH in this shell. Use PowerShell."; exit 1; }
+
 echo
 echo "1/3  Supabase sign-in — approve in the browser window that opens."
 pnpm exec supabase login || { echo "Supabase login failed."; exit 1; }
