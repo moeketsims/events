@@ -21,6 +21,12 @@ const PASS_TOKEN = /^p\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{22}$/;
 /** Ninety days. Long enough to cover an event and its settlement afterwards. */
 const PASS_COOKIE_MAX_AGE = 90 * 24 * 60 * 60;
 
+/** A display key's shape: 32 hex characters. The page compares it in constant time. */
+const DISPLAY_KEY = /^[0-9a-f]{32}$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** Twenty-four hours, BUILD-SPEC §5. */
+const DISPLAY_COOKIE_MAX_AGE = 24 * 60 * 60;
+
 export async function middleware(request: NextRequest) {
   // Attendee surfaces: mirror the token from the path into an httpOnly cookie
   // so `/api/bid` and the sub-pages can read it without the token travelling in
@@ -43,6 +49,31 @@ export async function middleware(request: NextRequest) {
         path: '/',
         maxAge: PASS_COOKIE_MAX_AGE,
       });
+    }
+
+    return response;
+  }
+
+  // The projection: remember the display key from `?k=` for 24 hours, so a
+  // reload of the projector laptop does not need the link again. Shape check
+  // only; the page and the state routes re-verify against `auctions.display_key`
+  // in constant time on every request (docs/06 T4.1). No Supabase client here.
+  if (request.nextUrl.pathname.startsWith('/display/')) {
+    const auctionId = request.nextUrl.pathname.split('/')[2] ?? '';
+    const key = request.nextUrl.searchParams.get('k');
+    const response = NextResponse.next({ request });
+
+    if (UUID.test(auctionId) && key && DISPLAY_KEY.test(key)) {
+      const value = `${auctionId}:${key}`;
+      if (request.cookies.get('cut_display')?.value !== value) {
+        response.cookies.set('cut_display', value, {
+          httpOnly: true,
+          sameSite: 'lax',
+          secure: request.nextUrl.protocol === 'https:',
+          path: '/',
+          maxAge: DISPLAY_COOKIE_MAX_AGE,
+        });
+      }
     }
 
     return response;
@@ -73,12 +104,12 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Staff surfaces, which need the session refreshed, plus /p, which needs no
-     * session at all and returns before the Supabase client is built. /display
-     * is left out entirely: it authenticates with the auction's display key and
-     * must not pay for a round trip on every board it renders.
+     * Staff surfaces, which need the session refreshed, plus /p and /display,
+     * which need no session at all and return before the Supabase client is
+     * built: /p mirrors the pass token into a cookie, /display the display key.
      */
     '/p/:path*',
+    '/display/:path*',
     '/dashboard/:path*',
     '/contacts/:path*',
     '/events/:path*',

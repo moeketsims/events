@@ -887,6 +887,8 @@ Rate limit: 10 requests per 10 seconds per attendee (in-memory map in the route;
 - `spotlight` — one lot large: image, title, current bid in very large type, next minimum, countdown, last five bids.
 - `total` — total raised, thank-you message, CUT logo.
 
+Built in T4.1 (docs/06): the key is compared in constant time; `middleware.ts` mirrors `?k=` into the `cut_display` cookie for 24 h so a reload needs no key; without either the page shows "This screen needs its display link." rather than a 404. The board (`components/display/Board.tsx`) subscribes to `auction:{id}` for `bid_placed`, `lot_status`, `bid_voided` and `display_mode`, and reads `GET /api/display/[auctionId]/state` (board, totals, mode, spotlit lot, last eight bids) on subscribe, after a payload that carries less than it needs, and every 2 s when `NEXT_PUBLIC_REALTIME_MODE=poll`; the spotlight's last five bids come from `GET /api/display/[auctionId]/lot/[lotId]/bids`. Both routes accept the key or the cookie and return bidder numbers only. Modes are the `auctions.display_mode` and `spotlight_lot_id` columns written by `set_display_mode`, which broadcasts the switch.
+
 ### 7.5 Webhooks
 
 | Route | Provider | Verification | Effect |
