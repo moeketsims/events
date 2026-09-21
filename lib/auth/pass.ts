@@ -56,6 +56,15 @@ function sign(kind: TokenKind, id22: string): string {
     .slice(0, SIG_LENGTH);
 }
 
+/**
+ * The bare HMAC step, for a token kind whose signed input is not `kind.id22`.
+ * The join token (lib/auth/join.ts) signs over a nonce stored on the row, so
+ * it needs the same secret and truncation without the self-contained shape.
+ */
+export function signRaw(input: string): string {
+  return createHmac('sha256', secret()).update(input).digest('base64url').slice(0, SIG_LENGTH);
+}
+
 export function signToken(kind: TokenKind, id: string): string {
   const id22 = uuidToId22(id);
   return `${kind}.${id22}.${sign(kind, id22)}`;

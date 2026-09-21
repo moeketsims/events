@@ -41,6 +41,7 @@ export const CONSENT_SOURCE = {
   walkIn: 'walk_in',
   import: 'import',
   auctionBid: 'auction_bid',
+  selfRegistration: 'self_registration',
 } as const;
 
 export function consentWording(version = CONSENT_VERSION): string {
