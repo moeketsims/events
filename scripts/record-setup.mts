@@ -273,7 +273,12 @@ async function pointAndType(page: Page, target: Locator, text: string, delay = 5
   await ring(page, null);
 }
 
-async function showCard(page: Page, lines: string[], holdMs = 3400, fadeOut = false): Promise<void> {
+async function showCard(
+  page: Page,
+  lines: string[],
+  holdMs = 3400,
+  fadeOut = false,
+): Promise<void> {
   await page.evaluate(
     ({ ls, fade, hold }) => {
       const card = document.createElement('div');
@@ -327,9 +332,13 @@ if (!env.SUPABASE_PROJECT_REF || !env.SUPABASE_SECRET_KEY) {
   process.exit(1);
 }
 
-const db = createClient(`https://${env.SUPABASE_PROJECT_REF}.supabase.co`, env.SUPABASE_SECRET_KEY, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
+const db = createClient(
+  `https://${env.SUPABASE_PROJECT_REF}.supabase.co`,
+  env.SUPABASE_SECRET_KEY,
+  {
+    auth: { autoRefreshToken: false, persistSession: false },
+  },
+);
 
 // Clear events left by an earlier take so re-running does not pile them up.
 // Matched on the exact recording title, so it can never touch the seeded Gala.
@@ -537,20 +546,33 @@ execFileSync(
   ffmpeg,
   [
     '-y',
-    '-i', raw,
-    '-f', 'lavfi',
-    '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
+    '-i',
+    raw,
+    '-f',
+    'lavfi',
+    '-i',
+    'anullsrc=channel_layout=stereo:sample_rate=44100',
     '-shortest',
-    '-c:v', 'libx264',
-    '-preset', 'slow',
-    '-crf', '25',
-    '-pix_fmt', 'yuv420p',
-    '-vf', 'fps=30,scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2',
-    '-profile:v', 'main',
-    '-level', '4.0',
-    '-c:a', 'aac',
-    '-b:a', '64k',
-    '-movflags', '+faststart',
+    '-c:v',
+    'libx264',
+    '-preset',
+    'slow',
+    '-crf',
+    '25',
+    '-pix_fmt',
+    'yuv420p',
+    '-vf',
+    'fps=30,scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2',
+    '-profile:v',
+    'main',
+    '-level',
+    '4.0',
+    '-c:a',
+    'aac',
+    '-b:a',
+    '64k',
+    '-movflags',
+    '+faststart',
     FINAL,
   ],
   { stdio: 'ignore' },
