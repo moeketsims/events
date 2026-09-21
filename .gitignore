@@ -31,3 +31,6 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 
+
+# Local deployment secrets, filled by hand, read by scripts/deploy-dev.sh
+.deploy/
