@@ -73,6 +73,12 @@ export default async function EventOverviewPage({
           description: 'The live list of who has arrived, and the export.',
         },
         {
+          href: `/events/${event.id}/join`,
+          title: 'Self-registration QR',
+          description: 'Print the code guests scan to register and check in at a table.',
+          soon: soon('selfRegistration'),
+        },
+        {
           href: `/events/${event.id}/broadcasts`,
           title: 'Broadcast desk',
           description: 'Reach everyone who has arrived, in-app and on WhatsApp.',

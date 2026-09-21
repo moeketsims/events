@@ -12,6 +12,7 @@
  *   bidding     T3.3  /p/[token]/auction and /p/[token]/bids
  *   console     T4.2  /events/[id]/auction/console
  *   results     T4.3  /events/[id]/results
+ *   selfRegistration T3.6 /join/[token] and /events/[id]/join
  */
 export const FEATURES = {
   broadcasts: true,
@@ -19,6 +20,7 @@ export const FEATURES = {
   bidding: true,
   console: false,
   results: false,
+  selfRegistration: true,
 } as const;
 
 export type Feature = keyof typeof FEATURES;

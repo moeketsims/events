@@ -19,7 +19,8 @@ import { fileURLToPath } from 'node:url';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { config as loadEnv } from 'dotenv';
 import type { Database } from '../../lib/db/types';
-import { signToken } from '../../lib/auth/pass';
+import { newTokenId, signToken } from '../../lib/auth/pass';
+import { signJoinToken } from '../../lib/auth/join';
 import { bidStep, formatZAR, type IncrementRow } from '../../lib/money';
 import { AUCTION_CLOSES_AT, CONTACTS, DEPARTMENT, EVENT, LOTS, SPLIT, STAFF } from './data';
 
@@ -292,7 +293,10 @@ async function seedContacts(
 // 4. Event, invitations, RSVPs, attendees
 // ---------------------------------------------------------------------------
 
-async function seedEvent(departmentId: string, organiserId: string | null): Promise<string> {
+async function seedEvent(
+  departmentId: string,
+  organiserId: string | null,
+): Promise<{ id: string; joinToken: string }> {
   const { data, error } = await db
     .from('events')
     .insert({
@@ -334,7 +338,17 @@ async function seedEvent(departmentId: string, organiserId: string | null): Prom
   ]);
   die('create event questions', questionError);
 
-  return data!.id;
+  // Self-registration on from the start, so a rehearsal can open the table QR
+  // on a phone without a query (docs/07 §2.7).
+  const joinNonce = newTokenId();
+  const joinToken = signJoinToken(data!.id, joinNonce);
+  const { error: joinError } = await db
+    .from('events')
+    .update({ join_nonce: joinNonce, join_token: joinToken })
+    .eq('id', data!.id);
+  die('set join token', joinError);
+
+  return { id: data!.id, joinToken };
 }
 
 type Attendee = { id: string; passToken: string; displayName: string; contactId: string };
@@ -621,7 +635,7 @@ async function main() {
   console.log(`${contacts.length}`);
 
   process.stdout.write('  event … ');
-  const eventId = await seedEvent(departmentId, organiserId);
+  const { id: eventId, joinToken } = await seedEvent(departmentId, organiserId);
   console.log(EVENT.title);
 
   process.stdout.write('  invitations, RSVPs and passes … ');
@@ -707,6 +721,9 @@ async function main() {
 
   console.log('  PROJECTION — full-screen on the external display\n');
   console.log(`    ${APP_URL}/display/${auction.id}?k=${auction.display_key}\n`);
+
+  console.log('  SELF-REGISTRATION QR — open this on a phone to register at a table\n');
+  console.log(`    ${APP_URL}/join/${joinToken}\n`);
 
   console.log(`  Seeded in ${seconds}s.\n`);
 }
